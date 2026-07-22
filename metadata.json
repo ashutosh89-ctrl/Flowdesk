@@ -1,0 +1,6 @@
+{
+  "name": "FlowDesk",
+  "description": "A comprehensive Client Workspace Platform for freelancers and clients featuring beautiful glassmorphism dashboards, invoice tracking, document management, client portals, and workspace project progress.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
