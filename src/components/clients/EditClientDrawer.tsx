@@ -10,7 +10,7 @@ interface EditClientDrawerProps {
   client: Client;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export default function EditClientDrawer({ client, isOpen, onClose, onSuccess }: EditClientDrawerProps) {
@@ -45,7 +45,7 @@ export default function EditClientDrawer({ client, isOpen, onClose, onSuccess }:
         phone
       });
       addToast('Client updated successfully!', 'success');
-      onSuccess();
+      onSuccess?.();
       onClose();
     } catch (err: any) {
       addToast(err.message || 'Failed to update client', 'warning');

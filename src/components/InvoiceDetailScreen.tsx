@@ -33,7 +33,7 @@ export default function InvoiceDetailScreen() {
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white/10 text-gray-500 font-medium">
         <p>No active invoice selected. View invoices from the dashboard or workspaces.</p>
         <button 
-          onClick={() => setScreen('dashboard')}
+          onClick={() => setScreen?.('dashboard')}
           className="mt-4 px-4 py-2 bg-gray-950 text-white rounded-lg text-sm cursor-pointer hover:bg-gray-800"
         >
           Go to Dashboard
@@ -76,7 +76,7 @@ export default function InvoiceDetailScreen() {
       {/* Header */}
       <header className="h-16 border-b border-gray-200/50 px-8 flex items-center justify-between bg-white/40 backdrop-blur-md">
         <button
-          onClick={() => setScreen('dashboard')}
+          onClick={() => setScreen?.('dashboard')}
           className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-950 transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4.5 h-4.5" />

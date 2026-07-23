@@ -43,7 +43,7 @@ export function ClientWorkspaceDashboardClient({ initialData }: ClientWorkspaceD
             </div>
             <div className="flex items-center gap-3 pt-2">
               <div className="flex-grow bg-gray-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-gray-950 h-full rounded-full transition-all duration-300" style={{ width: `${project.progress}%` }} />
+                <div className="bg-gray-950 h-full rounded-full transition-all duration-300 w-[var(--p)]" style={{ '--p': `${project.progress}%` } as React.CSSProperties} />
               </div>
             </div>
             <p className="text-xs text-gray-500 font-semibold mt-2 font-sans">

@@ -87,7 +87,7 @@ export default function ClientWorkspaceContainer() {
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white/10 text-gray-500 font-medium">
         <p>No active client selected. Select a client from the Client Registry.</p>
         <button 
-          onClick={() => setScreen('clients')}
+              onClick={() => setScreen?.('clients')}
           className="mt-4 px-4 py-2 bg-gray-950 text-white rounded-lg text-sm cursor-pointer hover:bg-gray-800"
         >
           View Client List
@@ -213,7 +213,7 @@ export default function ClientWorkspaceContainer() {
 
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => setScreen('clients')}
+                  onClick={() => setScreen?.('clients')}
               className="px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-semibold text-xs rounded-full cursor-pointer transition-colors"
             >
               Back to Clients
@@ -351,7 +351,7 @@ export default function ClientWorkspaceContainer() {
                         <span>42 Hrs (25%)</span>
                       </div>
                       <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-gray-900 rounded-full" style={{ width: '25%' }}></div>
+                        <div className="h-full bg-gray-900 rounded-full w-1/4"></div>
                       </div>
                     </div>
 
@@ -361,7 +361,7 @@ export default function ClientWorkspaceContainer() {
                         <span>128 Hrs (75%)</span>
                       </div>
                       <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-indigo-600 rounded-full" style={{ width: '75%' }}></div>
+                        <div className="h-full bg-indigo-600 rounded-full w-3/4"></div>
                       </div>
                     </div>
                   </div>
@@ -413,7 +413,7 @@ export default function ClientWorkspaceContainer() {
 
                   <div className="flex items-center gap-3 pt-2">
                     <div className="flex-1 bg-gray-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-gray-900 h-full rounded-full transition-all duration-300" style={{ width: `${checklistProgress}%` }}></div>
+                      <div className="bg-gray-900 h-full rounded-full transition-all duration-300 w-[var(--cp)]" style={{ '--cp': `${checklistProgress}%` } as React.CSSProperties}></div>
                     </div>
                     <span className="text-xs font-bold text-gray-900">{checklistProgress}%</span>
                   </div>

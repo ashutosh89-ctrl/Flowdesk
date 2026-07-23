@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/utils/session';
 import { readAll } from '@/lib/services/dataService';
 import { getComments, addComment } from '@/lib/services/commentService';
+import { sanitizeInput } from '@/lib/utils/sanitize';
 import { Comment } from '@/lib/types';
 
 export async function GET(request: Request) {
@@ -29,9 +30,16 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
+  const sanitizedContent = sanitizeInput(body.content || '');
+  
+  if (!sanitizedContent || sanitizedContent.length > 5000) {
+    return NextResponse.json({ error: 'Invalid comment content' }, { status: 400 });
+  }
+
   try {
     const comm = await addComment({
       ...body,
+      content: sanitizedContent,
       userId: session.id
     });
     return NextResponse.json(comm, { status: 201 });

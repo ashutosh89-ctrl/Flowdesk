@@ -41,11 +41,8 @@ export default function StepIndicator({ currentStep, totalSteps }: StepIndicator
               </span>
             </div>
             
-            {/* Connecting Line */}
             {stepNum < totalSteps && (
-              <div className="flex-1 h-[2px] mx-2 transition-colors duration-300 bg-gray-200" style={{
-                backgroundColor: currentStep > stepNum ? '#111827' : '#E5E7EB'
-              }} />
+              <div className={`flex-1 h-[2px] mx-2 transition-colors duration-300 ${currentStep > stepNum ? 'bg-gray-900' : 'bg-gray-200'}`} />
             )}
           </React.Fragment>
         );

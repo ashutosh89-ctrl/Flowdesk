@@ -5,7 +5,10 @@ import { useApp } from '../AppContext';
 import { signIn } from '../../lib/services/authService';
 import { Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
 
+import { useRouter } from 'next/navigation';
+
 export default function LoginForm() {
+  const router = useRouter();
   const { setUser, addToast } = useApp();
   
   const [email, setEmail] = useState('');
@@ -49,7 +52,7 @@ export default function LoginForm() {
       addToast('Welcome back, ' + result.user.name + '!', 'success');
       
       const targetUrl = result.user.role === 'client' ? '/client/workspace' : '/freelancer/dashboard';
-      window.location.href = targetUrl;
+      router.push(targetUrl);
     } catch (err: any) {
       addToast(err.message || 'Invalid email or password', 'warning');
       triggerShake();
@@ -68,7 +71,7 @@ export default function LoginForm() {
       addToast(`Welcome back, ${result.user.name}!`, 'success');
       
       const targetUrl = result.user.role === 'client' ? '/client/workspace' : '/freelancer/dashboard';
-      window.location.href = targetUrl;
+      router.push(targetUrl);
     } catch (err: any) {
       addToast(err.message || 'Demo login failed', 'warning');
       triggerShake();

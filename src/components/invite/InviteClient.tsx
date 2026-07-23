@@ -62,7 +62,7 @@ export default function InviteClient({ token }: { token: string }) {
       
       await acceptInvitation(token);
 
-      setUser(signedUser);
+      setUser(signedUser.user);
       addToast('Account created! Welcome to your workspace client portal.', 'success');
       router.replace('/client/workspace');
     } catch (err: any) {

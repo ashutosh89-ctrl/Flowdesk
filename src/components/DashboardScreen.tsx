@@ -44,11 +44,11 @@ export default function DashboardScreen() {
   const handleActionClick = (actionType: 'workspace' | 'invoice', targetId: string) => {
     if (actionType === 'workspace') {
       setActiveClientId(targetId);
-      setScreen('workspace');
+      setScreen?.('workspace');
       addToast('Navigated to Client Workspace', 'info');
     } else if (actionType === 'invoice') {
       setActiveInvoiceId(targetId);
-      setScreen('invoice');
+      setScreen?.('invoice');
       addToast('Opening Invoice Details', 'info');
     }
   };
@@ -114,7 +114,7 @@ export default function DashboardScreen() {
               transition={{ delay: i * 0.05 }}
               className="glass-card p-6 rounded-xl hover:shadow-md transition-shadow cursor-pointer"
               onClick={() => {
-                if (stat.id === 'clients') setScreen('clients');
+                if (stat.id === 'clients') setScreen?.('clients');
               }}
             >
               <div className="flex items-center justify-between mb-4">

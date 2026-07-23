@@ -1,5 +1,6 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, Client, Invoice } from '../lib/types';
 import { getClients } from '../lib/services/clientService';
 import { ToastMessage } from './Toast';
@@ -31,11 +32,13 @@ interface AppContextType {
   setInviteClientOpen: (val: boolean) => void;
   inviteClientId: string | null;
   setInviteClientId: (id: string | null) => void;
+  setScreen?: (screen: string) => void;
 }
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
+export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [user, setUserState] = useState<User | null>(null);
   const [activeClientId, setActiveClientId] = useState<string | null>(null);
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
@@ -81,7 +84,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setActiveClientId(null);
     setActiveInvoiceId(null);
     addToast('Logged out successfully', 'info');
-    window.location.href = '/login';
+    router.push('/login');
   };
 
   // Load user from server-side session cookie via API
@@ -107,35 +110,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
+  const value = useMemo(() => ({
+    user,
+    setUser,
+    activeClientId,
+    setActiveClientId,
+    activeInvoiceId,
+    setActiveInvoiceId,
+    clients,
+    refreshClients,
+    toasts,
+    addToast,
+    removeToast,
+    signOut,
+    themeAccent,
+    setThemeAccent,
+    isCreateClientOpen,
+    setCreateClientOpen,
+    isCreateProjectOpen,
+    setCreateProjectOpen,
+    isCreateInvoiceOpen,
+    setCreateInvoiceOpen,
+    isInviteClientOpen,
+    setInviteClientOpen,
+    inviteClientId,
+    setInviteClientId,
+    setScreen: () => {}
+  }), [
+    user,
+    activeClientId,
+    activeInvoiceId,
+    clients,
+    toasts,
+    themeAccent,
+    isCreateClientOpen,
+    isCreateProjectOpen,
+    isCreateInvoiceOpen,
+    isInviteClientOpen,
+    inviteClientId
+  ]);
+
   return (
-    <AppContext.Provider
-      value={{
-        user,
-        setUser,
-        activeClientId,
-        setActiveClientId,
-        activeInvoiceId,
-        setActiveInvoiceId,
-        clients,
-        refreshClients,
-        toasts,
-        addToast,
-        removeToast,
-        signOut,
-        themeAccent,
-        setThemeAccent,
-        isCreateClientOpen,
-        setCreateClientOpen,
-        isCreateProjectOpen,
-        setCreateProjectOpen,
-        isCreateInvoiceOpen,
-        setCreateInvoiceOpen,
-        isInviteClientOpen,
-        setInviteClientOpen,
-        inviteClientId,
-        setInviteClientId,
-      }}
-    >
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );

@@ -3,11 +3,18 @@ import React, { useState, useEffect } from 'react';
 import { Activity } from '../../lib/types';
 import { Loader2 } from 'lucide-react';
 
-export function ActivityTab({ workspaceId }: { workspaceId: string }) {
-  const [events, setEvents] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
+export function ActivityTab({ workspaceId, activities }: { workspaceId?: string; activities?: Activity[] }) {
+  const [events, setEvents] = useState<Activity[]>(activities || []);
+  const [loading, setLoading] = useState(!activities);
 
   useEffect(() => {
+    if (activities) {
+      setEvents(activities);
+      setLoading(false);
+      return;
+    }
+    if (!workspaceId) return;
+
     async function loadEvents() {
       try {
         const res = await fetch(`/api/activities?workspaceId=${workspaceId}`);
@@ -19,7 +26,7 @@ export function ActivityTab({ workspaceId }: { workspaceId: string }) {
       }
     }
     loadEvents();
-  }, [workspaceId]);
+  }, [workspaceId, activities]);
 
   if (loading) {
     return (
@@ -58,20 +65,18 @@ export function ActivityTab({ workspaceId }: { workspaceId: string }) {
   const yesterdayEvents = events.filter(e => isYesterday(e.createdAt));
   const earlierEvents = events.filter(e => !isToday(e.createdAt) && !isYesterday(e.createdAt));
 
-  const renderSection = (title: string, items: Activity[]) => {
-    if (items.length === 0) return null;
+  const renderSection = (title: string, list: Activity[]) => {
+    if (list.length === 0) return null;
     return (
-      <div className="space-y-3 pt-2">
-        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{title}</h4>
+      <div className="space-y-3">
+        <h4 className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">{title}</h4>
         <div className="space-y-2">
-          {items.map(event => (
-            <div key={event.id} className="bg-white border border-black/5 rounded-2xl p-4 flex justify-between items-center shadow-sm text-xs">
-              <div>
-                <p className="font-bold text-gray-900 leading-normal">{event.description}</p>
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mt-1">
-                  {new Date(event.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
+          {list.map(e => (
+            <div key={e.id} className="bg-white rounded-xl p-3 border border-black/5 flex items-center justify-between text-xs">
+              <span className="font-semibold text-gray-800">{e.description}</span>
+              <span className="text-[10px] text-gray-400 font-bold">
+                {new Date(e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
             </div>
           ))}
         </div>
@@ -80,10 +85,10 @@ export function ActivityTab({ workspaceId }: { workspaceId: string }) {
   };
 
   return (
-    <div className="space-y-6 font-sans mt-2">
-      {renderSection("Today", todayEvents)}
-      {renderSection("Yesterday", yesterdayEvents)}
-      {renderSection("Earlier", earlierEvents)}
+    <div className="space-y-6">
+      {renderSection('Today', todayEvents)}
+      {renderSection('Yesterday', yesterdayEvents)}
+      {renderSection('Earlier', earlierEvents)}
     </div>
   );
 }

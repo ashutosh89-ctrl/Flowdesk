@@ -56,7 +56,7 @@ export default function TopBar() {
     router.push('/login');
   };
 
-  const dropdownVariants = {
+  const dropdownVariants: any = {
     hidden: { opacity: 0, y: -4, scale: 0.95 },
     visible: { 
       opacity: 1, 
@@ -71,7 +71,7 @@ export default function TopBar() {
     exit: { opacity: 0, y: -4, scale: 0.95, transition: { duration: 0.1 } }
   };
 
-  const itemVariants = {
+  const itemVariants: any = {
     hidden: { opacity: 0, y: -2 },
     visible: { opacity: 1, y: 0 }
   };

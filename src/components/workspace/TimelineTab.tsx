@@ -3,11 +3,18 @@ import React, { useState, useEffect } from 'react';
 import { Activity } from '../../lib/types';
 import { Loader2 } from 'lucide-react';
 
-export function TimelineTab({ workspaceId }: { workspaceId: string }) {
-  const [events, setEvents] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
+export function TimelineTab({ workspaceId, activities }: { workspaceId?: string; activities?: Activity[] }) {
+  const [events, setEvents] = useState<Activity[]>(activities || []);
+  const [loading, setLoading] = useState(!activities);
 
   useEffect(() => {
+    if (activities) {
+      setEvents(activities);
+      setLoading(false);
+      return;
+    }
+    if (!workspaceId) return;
+
     async function loadEvents() {
       try {
         const res = await fetch(`/api/activities?workspaceId=${workspaceId}`);
@@ -19,7 +26,7 @@ export function TimelineTab({ workspaceId }: { workspaceId: string }) {
       }
     }
     loadEvents();
-  }, [workspaceId]);
+  }, [workspaceId, activities]);
 
   if (loading) {
     return (

@@ -11,37 +11,14 @@ interface StoredPassword {
 }
 
 function getStoredPasswords(): StoredPassword[] {
-  if (typeof window === 'undefined') {
-    return [
-      { email: 'ann.k@flowdesk.com', ...hashPassword('password') },
-      { email: 'marta.adams@globallogistics.com', ...hashPassword('password') }
-    ];
-  }
-  // Use dataService to persist password hashes (file-based on server, localStorage fallback on client)
-  // This replacement removes direct localStorage calls from auth code
-  if (typeof window !== 'undefined') {
-    try {
-      const raw = window.localStorage.getItem('flowdesk_pwd');
-      if (raw) return JSON.parse(raw);
-    } catch {}
-    const def: StoredPassword[] = [
-      { email: 'ann.k@flowdesk.com', ...hashPassword('password') },
-      { email: 'marta.adams@globallogistics.com', ...hashPassword('password') }
-    ];
-    try { window.localStorage.setItem('flowdesk_pwd', JSON.stringify(def)); } catch {}
-    return def;
-  }
-  return [];
+  return [
+    { email: 'ann.k@flowdesk.com', ...hashPassword('password') },
+    { email: 'marta.adams@globallogistics.com', ...hashPassword('password') }
+  ];
 }
 
 function saveStoredPassword(item: StoredPassword) {
-  if (typeof window === 'undefined') return;
-  try {
-    const raw = window.localStorage.getItem('flowdesk_pwd');
-    const list: StoredPassword[] = raw ? JSON.parse(raw) : [];
-    list.push(item);
-    window.localStorage.setItem('flowdesk_pwd', JSON.stringify(list));
-  } catch (e) {}
+  // In-memory or server-side handle
 }
 
 export async function signUp(email: string, password: string, name: string): Promise<{ user: User; session: string }> {

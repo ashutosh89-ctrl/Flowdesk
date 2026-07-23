@@ -5,7 +5,11 @@ import { useApp } from '../AppContext';
 import { signIn } from '../../lib/services/authService';
 import { Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
 
+import { useRouter } from 'next/navigation';
+import { loginSchema } from '@/lib/validation/schemas';
+
 export default function LoginFormClient() {
+  const router = useRouter();
   const { setUser, addToast } = useApp();
   
   const [email, setEmail] = useState('');
@@ -16,23 +20,18 @@ export default function LoginFormClient() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const validate = () => {
-    const newErrors: { email?: string; password?: string } = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
-    if (!email) {
-      newErrors.email = 'Email address is required';
-    } else if (!emailRegex.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
+    const result = loginSchema.safeParse({ email, password });
+    if (!result.success) {
+      const newErrors: { email?: string; password?: string } = {};
+      result.error.errors.forEach((err: { path: (string | number)[]; message: string }) => {
+        const field = err.path[0] as 'email' | 'password';
+        if (field) newErrors[field] = err.message;
+      });
+      setErrors(newErrors);
+      return false;
     }
-    
-    if (!password) {
-      newErrors.password = 'Password is required';
-    } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors({});
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,7 +54,7 @@ export default function LoginFormClient() {
           ? '/freelancer/dashboard'
           : '/client/workspace';
       
-      window.location.href = targetUrl;
+      router.push(targetUrl);
     } catch (err: any) {
       addToast(err.message || 'Invalid email or password', 'warning');
       triggerShake();
@@ -79,7 +78,7 @@ export default function LoginFormClient() {
           ? '/freelancer/dashboard'
           : '/client/workspace';
       
-      window.location.href = targetUrl;
+      router.push(targetUrl);
     } catch (err: any) {
       addToast(err.message || 'Demo login failed', 'warning');
       triggerShake();

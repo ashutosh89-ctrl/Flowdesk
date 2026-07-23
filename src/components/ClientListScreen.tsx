@@ -51,7 +51,7 @@ export default function ClientListScreen() {
 
   const handleClientClick = (clientId: string) => {
     setActiveClientId(clientId);
-    setScreen('workspace');
+    setScreen?.('workspace');
     addToast('Opening Workspace Overview', 'info');
   };
 

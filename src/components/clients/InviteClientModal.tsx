@@ -10,7 +10,7 @@ interface InviteClientModalProps {
   client: Client;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
 }
 
 export default function InviteClientModal({ client, isOpen, onClose, onSuccess }: InviteClientModalProps) {
@@ -30,7 +30,7 @@ export default function InviteClientModal({ client, isOpen, onClose, onSuccess }
     try {
       await createInvitation(client.id, email);
       addToast(`Invitation sent to ${email}`, 'success');
-      onSuccess();
+      onSuccess?.();
       onClose();
     } catch (err: any) {
       addToast(err.message || 'Failed to send invitation', 'warning');

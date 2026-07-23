@@ -414,19 +414,7 @@ async function loadDB(): Promise<Database> {
     const { readDB: fileRead } = await import('@/lib/db');
     return await fileRead() as unknown as Database;
   }
-  // Client-side: use localStorage as fallback
-  const data = localStorage.getItem(DB_KEY);
-  if (!data) {
-    try {
-      localStorage.setItem(DB_KEY, JSON.stringify(DEFAULT_DB));
-    } catch (e) {}
-    return DEFAULT_DB;
-  }
-  try {
-    return JSON.parse(data);
-  } catch (e) {
-    return DEFAULT_DB;
-  }
+  return DEFAULT_DB;
 }
 
 async function saveDB(db: Database) {
@@ -436,9 +424,6 @@ async function saveDB(db: Database) {
     await fileWrite(db as any);
     return;
   }
-  try {
-    localStorage.setItem(DB_KEY, JSON.stringify(db));
-  } catch (e) {}
 }
 
 export async function create<T>(table: string, data: any): Promise<T> {
@@ -614,3 +599,5 @@ export async function deleteRow(table: string, id: string): Promise<void> {
     throw error;
   }
 }
+
+export { deleteRow as remove };

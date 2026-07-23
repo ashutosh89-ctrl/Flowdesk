@@ -8,6 +8,7 @@ import { update } from '@/lib/services/dataService';
 import { User } from '@/lib/types';
 
 export default function OnboardingClient() {
+  const router = useRouter();
   const { user, setUser, addToast, refreshClients } = useApp();
   const [step, setStep] = useState(1);
 
@@ -27,10 +28,7 @@ export default function OnboardingClient() {
       
       addToast('Onboarding completed! Welcome to FlowDesk.', 'success');
       
-      // Hard navigate to ensure fresh auth state
-      window.location.href = user.role === 'freelancer' 
-        ? '/freelancer/dashboard' 
-        : '/client/workspace';
+      router.push(user.role === 'freelancer' ? '/freelancer/dashboard' : '/client/workspace');
     } catch (e) {
       addToast('Failed to save profile configurations', 'warning');
     }

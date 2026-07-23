@@ -220,7 +220,7 @@ export function ProjectsClient({ initialProjects, initialClients }: ProjectsClie
                       <td className="px-6 py-4.5">
                         <div className="flex items-center gap-2">
                           <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden shrink-0">
-                            <div className="bg-gray-900 h-full rounded-full" style={{ width: `${proj.progress}%` }} />
+                            <div className="bg-gray-900 h-full rounded-full w-[var(--p)]" style={{ '--p': `${proj.progress}%` } as React.CSSProperties} />
                           </div>
                           <span className="text-[11px] font-bold text-gray-600">{proj.progress}%</span>
                         </div>

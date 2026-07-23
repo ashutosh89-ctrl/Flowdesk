@@ -4,8 +4,11 @@ import Link from 'next/link';
 import { useApp } from '../AppContext';
 import { signUp } from '../../lib/services/authService';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { validatePassword, validateEmail } from '@/lib/utils/validation';
 
 export default function SignupFormClient() {
+  const router = useRouter();
   const { setUser, addToast } = useApp();
 
   const [name, setName] = useState('');
@@ -43,7 +46,6 @@ export default function SignupFormClient() {
 
   const validate = () => {
     const newErrors: typeof errors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!name || name.trim().length < 2) {
       newErrors.name = 'Name must be at least 2 characters';
@@ -51,12 +53,13 @@ export default function SignupFormClient() {
 
     if (!email) {
       newErrors.email = 'Email address is required';
-    } else if (!emailRegex.test(email)) {
+    } else if (!validateEmail(email)) {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (!password || password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      newErrors.password = passwordValidation.feedback.join('. ');
     }
 
     if (password !== confirmPassword) {
@@ -81,7 +84,7 @@ export default function SignupFormClient() {
       addToast('Account created successfully!', 'success');
       
       // Hard navigate to onboarding to ensure fresh state
-      window.location.href = '/onboarding';
+      router.push('/onboarding');
     } catch (err: any) {
       addToast(err.message || 'Registration failed', 'warning');
       triggerShake();

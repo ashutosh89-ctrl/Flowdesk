@@ -9,7 +9,7 @@ import EditClientDrawer from './EditClientDrawer';
 import InviteClientModal from './InviteClientModal';
 import { 
   Plus, Search, MoreHorizontal, X, 
-  Mail, Phone, Sparkles, ChevronRight, Edit3, Archive, AlertCircle 
+  Mail, Phone, Sparkles, ChevronRight, Edit3, Archive, AlertCircle, Share2 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 

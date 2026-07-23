@@ -1,25 +1,30 @@
-"use client";
-import React from 'react';
+'use client';
+
+import { useEffect } from 'react';
 
 export default function RootError({
   error,
   reset,
 }: {
-  error: Error;
+  error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    console.error('Root app error:', error);
+  }, [error]);
+
   return (
-    <div className="min-h-screen bg-[#F5F5F3] flex items-center justify-center p-8 font-sans">
-      <div className="bg-white border border-black/5 rounded-3xl p-8 shadow-2xl max-w-md w-full text-center space-y-4">
-        <h2 className="text-base font-extrabold text-red-650 uppercase tracking-wide">Application Error</h2>
-        <p className="text-xs text-gray-550 font-semibold leading-relaxed">
-          {error.message || "An unexpected error occurred."}
+    <div className="flex min-h-screen items-center justify-center bg-[#f2f2f0] p-4">
+      <div className="glass-card max-w-md p-8 text-center">
+        <h1 className="mb-2 text-2xl font-bold text-[#1a1a19]">Oops!</h1>
+        <p className="mb-6 text-sm text-[rgba(26,26,25,0.60)]">
+          We encountered an unexpected error. Please try reloading the page.
         </p>
         <button
           onClick={reset}
-          className="px-6 py-2.5 bg-gray-950 hover:bg-gray-800 text-white font-bold text-xs rounded-full transition-colors cursor-pointer"
+          className="rounded-lg bg-[#1a1a19] px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:bg-[#1a1a19]/90"
         >
-          Reload Page
+          Try Again
         </button>
       </div>
     </div>
