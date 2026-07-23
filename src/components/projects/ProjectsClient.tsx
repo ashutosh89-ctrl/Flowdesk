@@ -43,8 +43,9 @@ export function ProjectsClient({ initialProjects, initialClients }: ProjectsClie
   };
 
   const filteredProjects = projects.filter(p => {
-    const clientName = getClientName(p.clientId).toLowerCase();
-    return p.name.toLowerCase().includes(search.toLowerCase()) || clientName.includes(search.toLowerCase());
+    const clientName = (getClientName(p?.clientId || '') || '').toLowerCase();
+    const query = (search || '').toLowerCase();
+    return (p?.name || '').toLowerCase().includes(query) || clientName.includes(query);
   });
 
   const getStatusColor = (status: Project['status']) => {

@@ -155,10 +155,11 @@ export function ClientsClient({ initialClients, initialInvitations }: ClientsCli
   };
 
   const filteredClients = clients.filter((c) => {
+    const query = (search || '').toLowerCase();
     const matchesSearch = 
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.company.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase());
+      (c?.name || '').toLowerCase().includes(query) ||
+      (c?.company || '').toLowerCase().includes(query) ||
+      (c?.email || '').toLowerCase().includes(query);
     
     if (filter === 'archived') return c.status === 'archived' && matchesSearch;
     return c.status !== 'archived' && matchesSearch;

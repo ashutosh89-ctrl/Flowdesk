@@ -87,15 +87,17 @@ export function InvoicesClient({ initialInvoices, initialProjects, initialClient
   };
 
   const filteredInvoices = invoices.filter(inv => {
-    const projName = getProjectName(inv.projectId).toLowerCase();
-    const clientName = getClientName(inv.projectId).toLowerCase();
-    return inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) || 
-           projName.includes(search.toLowerCase()) ||
-           clientName.includes(search.toLowerCase());
+    const num = (inv?.invoiceNumber || inv?.number || inv?.id || '').toLowerCase();
+    const projName = (getProjectName(inv?.projectId || '') || '').toLowerCase();
+    const clientName = (getClientName(inv?.projectId || '') || '').toLowerCase();
+    const query = (search || '').toLowerCase();
+    return num.includes(query) || 
+           projName.includes(query) ||
+           clientName.includes(query);
   });
 
   const overdueInvoices = invoices.filter(i => i.status === 'overdue');
-  const overdueTotal = overdueInvoices.reduce((sum, item) => sum + item.total, 0);
+  const overdueTotal = overdueInvoices.reduce((sum, item) => sum + (item.total || 0), 0);
 
   return (
     <div className="flex-1 flex flex-col font-sans h-full">
@@ -161,7 +163,7 @@ export function InvoicesClient({ initialInvoices, initialProjects, initialClient
                   >
                     <td className="px-6 py-4 text-sm font-extrabold text-gray-950 flex items-center gap-2">
                       <FileText className="w-4 h-4 text-gray-400" />
-                      {inv.invoiceNumber}
+                      {inv.invoiceNumber || inv.number || inv.id}
                     </td>
                     <td className="px-6 py-4">
                       <h4 className="text-xs font-bold text-gray-900 leading-tight">{getClientName(inv.projectId)}</h4>
@@ -238,7 +240,7 @@ export function InvoicesClient({ initialInvoices, initialProjects, initialClient
               <div className="space-y-4 text-xs font-semibold text-gray-650">
                 <div className="flex justify-between">
                   <span>Invoice #</span>
-                  <span className="font-extrabold text-gray-950">{selectedInvoice.invoiceNumber}</span>
+                  <span className="font-extrabold text-gray-950">{selectedInvoice.invoiceNumber || selectedInvoice.number || selectedInvoice.id}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Client / Company</span>
