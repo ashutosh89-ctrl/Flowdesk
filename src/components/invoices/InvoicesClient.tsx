@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../AppContext';
 import { Project, Client, Invoice } from '../../lib/types';
 import { sendReminder } from '../../lib/services/invoiceService';
@@ -23,37 +23,39 @@ export function InvoicesClient({ initialInvoices, initialProjects, initialClient
     isCreateInvoiceOpen, setCreateInvoiceOpen 
   } = useApp();
 
-  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [clients, setClients] = useState<Client[]>(initialClients);
+  const [invoices, setInvoices] = useState<Invoice[]>(Array.isArray(initialInvoices) ? initialInvoices : []);
+  const [projects, setProjects] = useState<Project[]>(Array.isArray(initialProjects) ? initialProjects : []);
+  const [clients, setClients] = useState<Client[]>(Array.isArray(initialClients) ? initialClients : []);
   const [search, setSearch] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   const loadData = async () => {
     try {
       const invsRes = await fetch('/api/invoices');
-      const invs = await invsRes.json();
-      setInvoices(invs);
+      const invsData = await invsRes.json();
+      setInvoices(Array.isArray(invsData) ? invsData : (invsData?.invoices ?? []));
 
       const projsRes = await fetch('/api/projects');
-      const projs = await projsRes.json();
-      setProjects(projs);
+      const projsData = await projsRes.json();
+      setProjects(Array.isArray(projsData) ? projsData : (projsData?.projects ?? []));
 
       const clsRes = await fetch('/api/clients');
-      const cls = await clsRes.json();
-      setClients(cls);
-    } catch (e) {}
+      const clsData = await clsRes.json();
+      setClients(Array.isArray(clsData) ? clsData : (clsData?.clients ?? []));
+    } catch (e) {
+      setInvoices([]);
+    }
   };
 
   const getProjectName = (projId: string) => {
-    const p = projects.find(pr => pr.id === projId);
+    const p = (projects || []).find(pr => pr?.id === projId);
     return p ? p.name : 'Unknown Project';
   };
 
   const getClientName = (projId: string) => {
-    const p = projects.find(pr => pr.id === projId);
+    const p = (projects || []).find(pr => pr?.id === projId);
     if (!p) return 'Unknown Client';
-    const c = clients.find(cl => cl.id === p.clientId);
+    const c = (clients || []).find(cl => cl?.id === p.clientId);
     return c ? `${c.name} (${c.company})` : 'Unknown Client';
   };
 
@@ -72,7 +74,7 @@ export function InvoicesClient({ initialInvoices, initialProjects, initialClient
     const prevInvoices = [...invoices];
     
     // 1. Optimistic update
-    setInvoices(prev => prev.map(i => i.id === invoiceId ? { ...i, status: 'paid' as const } : i));
+    setInvoices(prev => prev.map(i => i?.id === invoiceId ? { ...i, status: 'paid' as const } : i));
     addToast('Invoice marked as Paid!', 'success');
     setSelectedInvoice(null);
 
@@ -86,18 +88,27 @@ export function InvoicesClient({ initialInvoices, initialProjects, initialClient
     }
   };
 
-  const filteredInvoices = invoices.filter(inv => {
-    const projName = (getProjectName(inv.projectId) || '').toLowerCase();
-    const clientName = (getClientName(inv.projectId) || '').toLowerCase();
-    const invNum = (inv.invoiceNumber || inv.number || inv.id || '').toLowerCase();
-    const q = (search || '').toLowerCase();
-    return invNum.includes(q) || 
-           projName.includes(q) ||
-           clientName.includes(q);
-  });
+  const filteredInvoices = useMemo(() => {
+    const safeInvoices = Array.isArray(invoices) ? invoices : [];
+    if (!search.trim()) return safeInvoices;
 
-  const overdueInvoices = invoices.filter(i => i.status === 'overdue');
-  const overdueTotal = overdueInvoices.reduce((sum, item) => sum + item.total, 0);
+    const q = search.toLowerCase();
+    return safeInvoices.filter(inv => {
+      if (!inv) return false;
+      const projName = (getProjectName(inv.projectId) || '').toLowerCase();
+      const clientName = (getClientName(inv.projectId) || '').toLowerCase();
+      const invNum = (inv.invoiceNumber || inv.number || inv.id || '').toLowerCase();
+      const status = (inv.status || '').toLowerCase();
+
+      return invNum.includes(q) || 
+             projName.includes(q) ||
+             clientName.includes(q) ||
+             status.includes(q);
+    });
+  }, [invoices, projects, clients, search]);
+
+  const overdueInvoices = (invoices || []).filter(i => i?.status === 'overdue');
+  const overdueTotal = overdueInvoices.reduce((sum, item) => sum + (item?.total || 0), 0);
 
   return (
     <div className="flex-1 flex flex-col font-sans h-full">
@@ -122,96 +133,76 @@ export function InvoicesClient({ initialInvoices, initialProjects, initialClient
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto p-6 space-y-6">
+      {/* Main content body */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {overdueInvoices.length > 0 && (
-          <div className="p-4 border border-red-150/30 bg-red-50 text-red-750 rounded-2xl flex gap-3 text-xs leading-normal">
-            <AlertTriangle className="w-5 h-5 shrink-0" />
-            <div>
-              <span className="font-extrabold block">Outstanding Receivables</span>
-              <span className="font-semibold block mt-0.5">
-                You have {overdueInvoices.length} overdue invoices totalling <span className="font-extrabold text-red-650">₹{overdueTotal.toLocaleString()}</span>. Consider sending quick email reminders.
-              </span>
+          <div className="p-4 border border-rose-200 bg-rose-50/50 rounded-2xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600" />
+              <div>
+                <h4 className="text-xs font-extrabold text-rose-950">Overdue Payments Warning</h4>
+                <p className="text-[11px] text-rose-700 font-semibold mt-0.5">You have {overdueInvoices.length} overdue invoice(s) totaling ₹{overdueTotal.toLocaleString('en-IN')}.</p>
+              </div>
             </div>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-black/5 overflow-hidden shadow-sm">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-black/5 bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                <th className="px-6 py-4">Invoice #</th>
-                <th className="px-6 py-4">Client / Project</th>
-                <th className="px-6 py-4">Due Date</th>
-                <th className="px-6 py-4">Total Amount</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-150/40">
-              {filteredInvoices.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-xs font-semibold text-gray-400">
-                    No invoices found.
-                  </td>
-                </tr>
-              ) : (
-                filteredInvoices.map((inv) => (
-                  <tr
-                    key={inv.id}
-                    onClick={() => setSelectedInvoice(inv)}
-                    className="hover:bg-gray-50/50 transition-colors cursor-pointer group"
+        {filteredInvoices.length === 0 ? (
+          <div className="py-16 text-center">
+            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <h3 className="text-sm font-extrabold text-gray-900">No Invoices Found</h3>
+            <p className="text-xs text-gray-400 font-semibold mt-1">Create your first invoice or try adjusting your search terms.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredInvoices.map((inv) => (
+              <div 
+                key={inv.id}
+                className="glass-card p-5 rounded-2xl border border-black/5 hover:border-black/15 transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-mono font-bold text-gray-900 bg-gray-100 px-2.5 py-1 rounded-md">
+                      #{inv.invoiceNumber || inv.number || inv.id}
+                    </span>
+                    <span className={`text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full ${
+                      inv.status === 'paid' ? 'bg-emerald-100 text-emerald-800' :
+                      inv.status === 'overdue' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {inv.status}
+                    </span>
+                  </div>
+
+                  <h3 className="text-sm font-extrabold text-gray-950 mb-1">{getProjectName(inv.projectId)}</h3>
+                  <p className="text-xs text-gray-400 font-semibold mb-4">{getClientName(inv.projectId)}</p>
+
+                  <div className="text-xl font-extrabold text-gray-950 flex items-center gap-0.5 mb-4">
+                    <IndianRupee className="w-4 h-4" />
+                    {(inv.total || 0).toLocaleString('en-IN')}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-3 border-t border-black/5">
+                  {inv.status !== 'paid' && (
+                    <button
+                      onClick={() => handleMarkPaid(inv.id)}
+                      className="flex-1 py-1.5 bg-gray-950 text-white font-bold text-[11px] rounded-lg hover:bg-gray-800 transition-colors cursor-pointer text-center"
+                    >
+                      Mark Paid
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleSendReminder(inv.id)}
+                    className="p-2 border border-black/10 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors cursor-pointer"
+                    title="Send Payment Reminder"
                   >
-                    <td className="px-6 py-4 text-sm font-extrabold text-gray-950 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-gray-400" />
-                      {inv.invoiceNumber}
-                    </td>
-                    <td className="px-6 py-4">
-                      <h4 className="text-xs font-bold text-gray-900 leading-tight">{getClientName(inv.projectId)}</h4>
-                      <span className="text-[10px] font-bold text-gray-400 block mt-0.5">{getProjectName(inv.projectId)}</span>
-                    </td>
-                    <td className="px-6 py-4 text-xs font-semibold text-gray-500">
-                      {new Date(inv.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </td>
-                    <td className="px-6 py-4 text-xs font-extrabold text-gray-900">
-                      ₹{inv.total.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
-                        inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                        inv.status === 'overdue' ? 'bg-red-50 text-red-750 border-red-150/30' :
-                        'bg-amber-50 text-amber-700 border-amber-100'
-                      }`}>
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-end gap-2">
-                        {inv.status !== 'paid' && (
-                          <button
-                            onClick={() => handleSendReminder(inv.id)}
-                            className="p-1.5 bg-gray-50 hover:bg-gray-150 rounded-full border border-black/5 text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
-                            title="Send email reminder"
-                          >
-                            <Bell className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <a
-                          href={inv.razorpayLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 bg-gray-50 hover:bg-gray-150 rounded-full border border-black/5 text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
-                          title="Open payment link"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                    <Bell className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <CreateInvoiceModal 
@@ -219,75 +210,6 @@ export function InvoicesClient({ initialInvoices, initialProjects, initialClient
         onClose={() => setCreateInvoiceOpen(false)}
         onSuccess={loadData}
       />
-
-      <AnimatePresence>
-        {selectedInvoice && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-xs p-4">
-            <div className="fixed inset-0" onClick={() => setSelectedInvoice(null)} />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative z-10 w-full max-w-md bg-white border border-black/5 rounded-[24px] shadow-2xl p-6 space-y-6"
-            >
-              <div className="flex justify-between items-center border-b border-black/5 pb-2">
-                <h3 className="text-xs font-bold text-gray-950 uppercase tracking-wide">Invoice Details</h3>
-                <button onClick={() => setSelectedInvoice(null)} className="p-1 hover:bg-black/5 rounded-full text-gray-400">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-4 text-xs font-semibold text-gray-650">
-                <div className="flex justify-between">
-                  <span>Invoice #</span>
-                  <span className="font-extrabold text-gray-950">{selectedInvoice.invoiceNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Client / Company</span>
-                  <span className="font-extrabold text-gray-950">{getClientName(selectedInvoice.projectId)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Due Date</span>
-                  <span className="text-gray-900">{new Date(selectedInvoice.dueDate).toLocaleDateString()}</span>
-                </div>
-                
-                <div className="border-t border-dashed border-black/5 pt-3 space-y-2">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>₹{selectedInvoice.subtotal.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-400">
-                    <span>GST (18%)</span>
-                    <span>₹{selectedInvoice.taxAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-extrabold text-gray-950 pt-1">
-                    <span>Total Amount</span>
-                    <span>₹{selectedInvoice.total.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => setSelectedInvoice(null)}
-                  className="flex-grow py-2.5 border border-black/10 text-gray-700 text-xs font-bold rounded-full cursor-pointer hover:bg-gray-50"
-                >
-                  Close
-                </button>
-                {selectedInvoice.status !== 'paid' && (
-                  <button
-                    onClick={() => handleMarkPaid(selectedInvoice.id)}
-                    className="flex-grow py-2.5 bg-emerald-650 hover:bg-emerald-700 text-white text-xs font-bold rounded-full cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    Mark as Paid
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

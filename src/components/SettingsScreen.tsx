@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
 import { useApp } from './AppContext';
 import { update } from '../lib/services/dataService';
 import { User } from '../lib/types';
 import { 
-  User as UserIcon, Shield, Sliders, Bell, Sparkles, 
-  Palette, Smartphone, Heart, HelpCircle, Save, Check 
+  User as UserIcon, Shield, Sliders, Bell, 
+  Save 
 } from 'lucide-react';
 
 export default function SettingsScreen() {
   const { user, setUser, addToast } = useApp();
-  const [subTab, setSubTab] = useState<'profile' | 'security' | 'appearance' | 'notifications'>('profile');
+  const [subTab, setSubTab] = useState<'profile' | 'security' | 'notifications'>('profile');
   const [name, setName] = useState(user?.name || '');
   const [bio, setBio] = useState('Premium digital designer crafting high-fidelity product workflows.');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [accent, setAccent] = useState<'slate' | 'indigo' | 'emerald'>('slate');
   const [emailDigests, setEmailDigests] = useState(true);
   const [pushNotes, setPushNotes] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -41,7 +38,6 @@ export default function SettingsScreen() {
   const tabs = [
     { id: 'profile', name: 'Personal Info', icon: UserIcon },
     { id: 'security', name: 'Account Security', icon: Shield },
-    { id: 'appearance', name: 'Appearance', icon: Palette },
     { id: 'notifications', name: 'Notifications', icon: Bell },
   ] as const;
 
@@ -98,106 +94,55 @@ export default function SettingsScreen() {
 
         {/* Content sheet */}
         <div className="flex-1 overflow-y-auto p-8 max-w-2xl">
-          <form onSubmit={handleSave} className="space-y-8">
+          <form onSubmit={handleSave} className="space-y-6">
             
             {subTab === 'profile' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Personal Info</h3>
-                  <p className="text-xs text-gray-500 font-semibold mt-1">Configure your workspace identities and profile details.</p>
-                </div>
-
-                {/* Avatar change block */}
-                <div className="flex items-center gap-4 pt-2">
-                  <img
-                    src={user?.avatar || 'https://api.dicebear.com/7.x/initials/svg?seed=Ann'}
-                    alt="Ann"
-                    className="w-16 h-16 rounded-full border border-gray-200 object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => addToast('Mock picture uploader opened...', 'info')}
-                      className="px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-bold text-xs rounded-lg transition-all cursor-pointer"
-                    >
-                      Upload New Picture
-                    </button>
-                    <p className="text-[10px] text-gray-400 mt-1 font-semibold uppercase">JPG, PNG or GIF (Max 1MB)</p>
-                  </div>
+                  <h3 className="text-base font-bold text-gray-900">Personal Info</h3>
+                  <p className="text-xs text-gray-500 mt-1">Configure your workspace identities and profile details.</p>
                 </div>
 
                 <div className="space-y-4 pt-2">
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-2">Full Display Name</label>
+                  <div className="relative">
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-white/60 hover:bg-white/80 focus:bg-white border border-gray-200 outline-none text-xs font-bold rounded-lg transition-all"
+                      className="peer w-full h-12 px-4 pt-5 pb-1 bg-white/50 border border-gray-300 rounded-xl text-gray-900 placeholder-transparent focus:outline-none focus:border-gray-900 transition-all text-sm"
+                      placeholder=" "
                       required
                     />
+                    <label className="absolute left-4 top-3.5 text-gray-500 text-sm transition-all pointer-events-none peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-900 peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-xs">
+                      Display Name
+                    </label>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-2">Short Professional Bio</label>
+                  <div className="relative">
                     <textarea
                       rows={3}
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-white/60 hover:bg-white/80 focus:bg-white border border-gray-200 outline-none text-xs font-bold rounded-lg transition-all"
+                      className="peer w-full px-4 pt-5 pb-2 bg-white/50 border border-gray-300 rounded-xl text-gray-900 placeholder-transparent focus:outline-none focus:border-gray-900 transition-all text-sm resize-none"
+                      placeholder=" "
                     />
+                    <label className="absolute left-4 top-3 text-gray-500 text-sm transition-all pointer-events-none peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-900 peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-xs">
+                      Short Professional Bio
+                    </label>
                   </div>
                 </div>
               </div>
             )}
 
             {subTab === 'security' && (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Account Security</h3>
-                  <p className="text-xs text-gray-500 font-semibold mt-1">Manage and lock credentials, OAuth links and security rules.</p>
+                  <h3 className="text-base font-bold text-gray-900">Account Security</h3>
+                  <p className="text-xs text-gray-500 mt-1">Manage credentials and authentication states.</p>
                 </div>
-
-                <div className="p-4 border border-emerald-100 bg-emerald-50 text-emerald-800 rounded-xl flex gap-3 text-xs leading-relaxed">
-                  <Shield className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-extrabold uppercase">SECURED BY FLOWDESK MIDDLEWARE:</span> Your workspace session is securely cryptographically locked with HMAC sign-offs.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {subTab === 'appearance' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">Workspace Brand Identity</h3>
-                  <p className="text-xs text-gray-500 font-semibold mt-1">Customize the display accent brand color for your FlowDesk dashboard.</p>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Accent Brand Identity</h4>
-                  <div className="flex gap-3">
-                    {[
-                      { id: 'slate', color: 'bg-gray-900', name: 'Slate Gray' },
-                      { id: 'indigo', color: 'bg-indigo-600', name: 'Electric Indigo' },
-                      { id: 'emerald', color: 'bg-emerald-600', name: 'Emerald Wave' },
-                    ].map((col) => (
-                      <button
-                        key={col.id}
-                        type="button"
-                        onClick={() => {
-                          setAccent(col.id as any);
-                          addToast(`Brand accent swapped to ${col.name}!`, 'success');
-                        }}
-                        className={`w-10 h-10 rounded-full cursor-pointer flex items-center justify-center relative ${col.color}`}
-                      >
-                        {accent === col.id && (
-                          <Check className="w-5 h-5 text-white" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                <div className="p-4 border border-emerald-200 bg-emerald-50/50 text-emerald-800 rounded-xl flex gap-3 text-xs leading-normal">
+                  <span className="font-semibold shrink-0">Security Middleware active</span>
+                  <span>Your dashboard session is securely locked with dual-mode Supabase credentials verification.</span>
                 </div>
               </div>
             )}
@@ -205,15 +150,15 @@ export default function SettingsScreen() {
             {subTab === 'notifications' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Notifications</h3>
-                  <p className="text-xs text-gray-500 font-semibold mt-1">Control email alerts, reminder triggers, and mobile push feeds.</p>
+                  <h3 className="text-base font-bold text-gray-900">Notifications</h3>
+                  <p className="text-xs text-gray-500 mt-1">Control email alerts, billing updates, and real-time feeds.</p>
                 </div>
 
-                <div className="space-y-4 pt-2">
-                  <div className="flex items-center justify-between p-3.5 border border-gray-100 rounded-xl bg-white/40">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 border border-gray-200/50 rounded-xl bg-white/40">
                     <div>
-                      <h4 className="text-xs font-bold text-gray-900">Weekly Summary Email Digests</h4>
-                      <p className="text-[10px] text-gray-400 font-semibold mt-1">Receive automatic payment reminders and client feedback digests.</p>
+                      <h4 className="text-sm font-semibold text-gray-900">Email Digests</h4>
+                      <p className="text-xs text-gray-500 mt-0.5">Receive summary reports on client activities.</p>
                     </div>
                     <button
                       type="button"
@@ -224,14 +169,14 @@ export default function SettingsScreen() {
                     >
                       <div className={`w-4.5 h-4.5 bg-white rounded-full absolute top-0.75 transition-all ${
                         emailDigests ? 'right-0.75' : 'left-0.75'
-                      }`}></div>
+                      }`} />
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between p-3.5 border border-gray-100 rounded-xl bg-white/40">
+                  <div className="flex items-center justify-between p-4 border border-gray-200/50 rounded-xl bg-white/40">
                     <div>
-                      <h4 className="text-xs font-bold text-gray-900">Realtime Push Notifications</h4>
-                      <p className="text-[10px] text-gray-400 font-semibold mt-1">Direct chrome visual banners on client uploads and deliverables reviews.</p>
+                      <h4 className="text-sm font-semibold text-gray-900">Realtime Banners</h4>
+                      <p className="text-xs text-gray-500 mt-0.5">Show notifications when client signs documents.</p>
                     </div>
                     <button
                       type="button"
@@ -242,18 +187,15 @@ export default function SettingsScreen() {
                     >
                       <div className={`w-4.5 h-4.5 bg-white rounded-full absolute top-0.75 transition-all ${
                         pushNotes ? 'right-0.75' : 'left-0.75'
-                      }`}></div>
+                      }`} />
                     </button>
                   </div>
                 </div>
               </div>
             )}
-
           </form>
         </div>
-
       </div>
-
     </div>
   );
 }

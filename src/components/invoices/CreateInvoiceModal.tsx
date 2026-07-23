@@ -1,11 +1,58 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../AppContext';
 import { createInvoice } from '../../lib/services/invoiceService';
 import { readAll } from '../../lib/services/dataService';
 import { Project, InvoiceItem } from '../../lib/types';
 import { X, Plus, Trash2, CreditCard, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
+
+interface AmountInputProps {
+  value: number;
+  onChange: (val: number) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+function AmountInput({ value, onChange, placeholder = '0', className = '' }: AmountInputProps) {
+  const [displayValue, setDisplayValue] = useState(value ? value.toString() : '');
+
+  useEffect(() => {
+    setDisplayValue(value ? value.toString() : '');
+  }, [value]);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) {
+      setDisplayValue(raw);
+      const num = raw === '' ? 0 : parseFloat(raw);
+      onChange(isNaN(num) ? 0 : num);
+    }
+  }, [onChange]);
+
+  const handleBlur = useCallback(() => {
+    if (displayValue === '' || displayValue === '.') {
+      setDisplayValue('0');
+      onChange(0);
+    } else {
+      const num = parseFloat(displayValue);
+      setDisplayValue(isNaN(num) ? '0' : num.toString());
+    }
+  }, [displayValue, onChange]);
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={displayValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      placeholder={placeholder}
+      className={className}
+      required
+    />
+  );
+}
 
 interface CreateInvoiceModalProps {
   isOpen: boolean;
@@ -51,10 +98,8 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess }: Creat
   // Recalculate totals whenever items change
   useEffect(() => {
     let sub = 0;
-    const updatedItems = items.map(item => {
-      const amt = item.quantity * item.rate;
-      sub += amt;
-      return { ...item, amount: amt };
+    items.forEach(item => {
+      sub += (item.quantity || 0) * (item.rate || 0);
     });
     
     const tax = Math.round(sub * 0.18); // 18% GST
@@ -75,7 +120,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess }: Creat
   const handleItemChange = (index: number, field: keyof InvoiceItem, value: any) => {
     const newItems = [...items];
     if (field === 'quantity') {
-      newItems[index].quantity = Math.max(1, parseInt(value) || 0);
+      newItems[index].quantity = Math.max(0, parseFloat(value) || 0);
     } else if (field === 'rate') {
       newItems[index].rate = Math.max(0, parseFloat(value) || 0);
     } else {
@@ -236,32 +281,27 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess }: Creat
 
                   {/* Quantity */}
                   <div className="col-span-2 relative">
-                    <input
-                      type="number"
+                    <AmountInput
                       value={item.quantity}
-                      onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                      onChange={(val) => handleItemChange(index, 'quantity', val)}
+                      placeholder="Qty"
                       className="w-full h-9 px-3 bg-white border border-black/10 rounded-lg text-xs font-semibold focus:outline-none focus:border-gray-900 text-center"
-                      min="1"
-                      required
                     />
                   </div>
 
                   {/* Rate */}
                   <div className="col-span-2 relative">
-                    <input
-                      type="number"
+                    <AmountInput
                       value={item.rate}
-                      onChange={(e) => handleItemChange(index, 'rate', e.target.value)}
+                      onChange={(val) => handleItemChange(index, 'rate', val)}
                       placeholder="Rate"
                       className="w-full h-9 px-3 bg-white border border-black/10 rounded-lg text-xs font-semibold focus:outline-none focus:border-gray-900 text-right"
-                      min="0"
-                      required
                     />
                   </div>
 
                   {/* Total amount for row */}
                   <div className="col-span-1 text-right text-xs font-bold text-gray-700">
-                    ₹{(item.quantity * item.rate).toLocaleString()}
+                    ₹{((item.quantity || 0) * (item.rate || 0)).toLocaleString()}
                   </div>
 
                   {/* Remove Button */}

@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import { AppProvider } from '../components/AppContext';
 import ToastWrapper from '../components/ToastWrapper';
 import { CommandPalette } from '@/components/shared/CommandPalette';
+import { QuickSearch } from '@/components/shared/QuickSearch';
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -35,6 +36,7 @@ export default function RootLayout({
           {children}
           <ToastWrapper />
           <CommandPalette />
+          <QuickSearch />
         </AppProvider>
       </body>
     </html>

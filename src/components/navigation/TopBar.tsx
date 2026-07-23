@@ -1,9 +1,9 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '../AppContext';
-import { Bell, Plus, User, CreditCard, LogOut, ChevronDown, Check, FolderHeart } from 'lucide-react';
+import { Bell, Plus, User, CreditCard, LogOut, ChevronDown, Users, FolderOpen, Receipt, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function TopBar() {
@@ -11,14 +11,35 @@ export default function TopBar() {
   const router = useRouter();
   const { 
     user, signOut, 
-    setCreateClientOpen, setCreateProjectOpen, setCreateInvoiceOpen,
-    toasts
+    setCreateClientOpen, setCreateProjectOpen, setCreateInvoiceOpen
   } = useApp();
 
   const [title, setTitle] = useState('Dashboard');
   const [showQuickCreate, setShowQuickCreate] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [hasNotifications, setHasNotifications] = useState(true);
+
+  const plusRef = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  // Click outside handling
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (plusRef.current && !plusRef.current.contains(e.target as Node)) {
+        setShowQuickCreate(false);
+      }
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Resolve dynamic title based on path
   useEffect(() => {
@@ -96,28 +117,54 @@ export default function TopBar() {
 
       {/* Right side: Actions & Profile */}
       <div className="flex items-center gap-4">
-        {/* Notification Bell */}
-        <button 
-          onClick={() => setHasNotifications(false)}
-          className="relative p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-black/5 transition-all focus:outline-none"
-        >
-          <Bell className="w-5 h-5" />
-          {hasNotifications && (
-            <motion.span 
-              initial={{ scale: 0 }}
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ repeat: Infinity, duration: 2, repeatType: 'reverse' }}
-              className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"
-            />
-          )}
-        </button>
+        {/* Notification Bell Dropdown */}
+        <div ref={bellRef} className="relative">
+          <button 
+            onClick={() => {
+              setShowNotifications(!showNotifications);
+              setHasNotifications(false);
+              setShowQuickCreate(false);
+              setShowProfileMenu(false);
+            }}
+            className="relative p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-black/5 transition-all focus:outline-none cursor-pointer"
+          >
+            <Bell className="w-5 h-5" />
+            {hasNotifications && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+            )}
+          </button>
+
+          <AnimatePresence>
+            {showNotifications && (
+              <motion.div
+                variants={dropdownVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="absolute right-0 mt-2 w-80 bg-white border border-black/5 rounded-2xl shadow-xl overflow-hidden z-30"
+              >
+                <div className="flex items-center justify-between border-b border-black/5 px-4 py-3">
+                  <span className="text-xs font-bold text-gray-950">Notifications</span>
+                  <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-gray-900">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="p-6 text-center">
+                  <p className="text-xs font-semibold text-gray-700">No new notifications</p>
+                  <p className="text-[10px] text-gray-400 mt-1">Activity alerts will appear here when updates occur.</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Quick Create Dropdown Button (Only for Freelancers) */}
         {user?.role === 'freelancer' && (
-          <div className="relative">
+          <div ref={plusRef} className="relative">
             <button
               onClick={() => {
                 setShowQuickCreate(!showQuickCreate);
+                setShowNotifications(false);
                 setShowProfileMenu(false);
               }}
               className="w-10 h-10 rounded-full bg-gray-950 flex items-center justify-center text-white hover:bg-gray-800 transition-colors shadow-sm focus:outline-none cursor-pointer"
@@ -127,58 +174,62 @@ export default function TopBar() {
 
             <AnimatePresence>
               {showQuickCreate && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowQuickCreate(false)} />
-                  <motion.div
-                    variants={dropdownVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="absolute right-0 mt-2 w-48 bg-white border border-black/5 rounded-2xl shadow-xl p-2 z-20"
+                <motion.div
+                  variants={dropdownVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="absolute right-0 mt-2 w-48 bg-white border border-black/5 rounded-2xl shadow-xl p-2 z-30"
+                >
+                  <motion.button
+                    variants={itemVariants}
+                    onClick={() => {
+                      router.push('/freelancer/clients');
+                      setCreateClientOpen(true);
+                      setShowQuickCreate(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors cursor-pointer flex items-center gap-2"
                   >
-                    <motion.button
-                      variants={itemVariants}
-                      onClick={() => {
-                        setCreateClientOpen(true);
-                        setShowQuickCreate(false);
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors cursor-pointer"
-                    >
-                      New Client
-                    </motion.button>
-                    <motion.button
-                      variants={itemVariants}
-                      onClick={() => {
-                        setCreateProjectOpen(true);
-                        setShowQuickCreate(false);
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors cursor-pointer"
-                    >
-                      New Project
-                    </motion.button>
-                    <motion.button
-                      variants={itemVariants}
-                      onClick={() => {
-                        setCreateInvoiceOpen(true);
-                        setShowQuickCreate(false);
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors cursor-pointer"
-                    >
-                      Create Invoice
-                    </motion.button>
-                  </motion.div>
-                </>
+                    <Users className="w-4 h-4 text-gray-400" />
+                    New Client
+                  </motion.button>
+                  <motion.button
+                    variants={itemVariants}
+                    onClick={() => {
+                      router.push('/freelancer/projects');
+                      setCreateProjectOpen(true);
+                      setShowQuickCreate(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors cursor-pointer flex items-center gap-2"
+                  >
+                    <FolderOpen className="w-4 h-4 text-gray-400" />
+                    New Project
+                  </motion.button>
+                  <motion.button
+                    variants={itemVariants}
+                    onClick={() => {
+                      router.push('/freelancer/invoices');
+                      setCreateInvoiceOpen(true);
+                      setShowQuickCreate(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors cursor-pointer flex items-center gap-2"
+                  >
+                    <Receipt className="w-4 h-4 text-gray-400" />
+                    Create Invoice
+                  </motion.button>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
         )}
 
         {/* Profile Dropdown */}
-        <div className="relative">
+        <div ref={profileRef} className="relative">
           <button
             onClick={() => {
               setShowProfileMenu(!showProfileMenu);
               setShowQuickCreate(false);
+              setShowNotifications(false);
             }}
             className="flex items-center gap-1 focus:outline-none cursor-pointer"
           >
@@ -193,70 +244,67 @@ export default function TopBar() {
 
           <AnimatePresence>
             {showProfileMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowProfileMenu(false)} />
-                <motion.div
-                  variants={dropdownVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  className="absolute right-0 mt-2 w-52 bg-white border border-black/5 rounded-2xl shadow-xl p-2 z-20"
-                >
-                  <motion.div variants={itemVariants} className="px-4 py-2 mb-1">
-                    <p className="text-xs font-bold text-gray-900 truncate">{user?.name}</p>
-                    <p className="text-[10px] text-gray-400 truncate">{user?.email}</p>
-                  </motion.div>
-                  
-                  <div className="h-px bg-black/5 my-1" />
+              <motion.div
+                variants={dropdownVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="absolute right-0 mt-2 w-52 bg-white border border-black/5 rounded-2xl shadow-xl p-2 z-30"
+              >
+                <motion.div variants={itemVariants} className="px-4 py-2 mb-1">
+                  <p className="text-xs font-bold text-gray-900 truncate">{user?.name}</p>
+                  <p className="text-[10px] text-gray-400 truncate">{user?.email}</p>
+                </motion.div>
+                
+                <div className="h-px bg-black/5 my-1" />
 
-                  {user?.role === 'freelancer' ? (
-                    <>
-                      <motion.div variants={itemVariants}>
-                        <Link
-                          href="/freelancer/settings"
-                          onClick={() => setShowProfileMenu(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors"
-                        >
-                          <User className="w-4 h-4 text-gray-400" />
-                          Profile
-                        </Link>
-                      </motion.div>
-                      <motion.div variants={itemVariants}>
-                        <Link
-                          href="/freelancer/settings?tab=billing"
-                          onClick={() => setShowProfileMenu(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors"
-                        >
-                          <CreditCard className="w-4 h-4 text-gray-400" />
-                          Billing
-                        </Link>
-                      </motion.div>
-                    </>
-                  ) : (
+                {user?.role === 'freelancer' ? (
+                  <>
                     <motion.div variants={itemVariants}>
                       <Link
-                        href="/client/workspace"
+                        href="/freelancer/settings"
                         onClick={() => setShowProfileMenu(false)}
                         className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors"
                       >
                         <User className="w-4 h-4 text-gray-400" />
-                        Workspace
+                        Profile
                       </Link>
                     </motion.div>
-                  )}
+                    <motion.div variants={itemVariants}>
+                      <Link
+                        href="/freelancer/settings"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors"
+                      >
+                        <CreditCard className="w-4 h-4 text-gray-400" />
+                        Billing
+                      </Link>
+                    </motion.div>
+                  </>
+                ) : (
+                  <motion.div variants={itemVariants}>
+                    <Link
+                      href="/client/workspace"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors"
+                    >
+                      <User className="w-4 h-4 text-gray-400" />
+                      Workspace
+                    </Link>
+                  </motion.div>
+                )}
 
-                  <div className="h-px bg-black/5 my-1" />
+                <div className="h-px bg-black/5 my-1" />
 
-                  <motion.button
-                    variants={itemVariants}
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer text-left"
-                  >
-                    <LogOut className="w-4 h-4 text-rose-550" />
-                    Log Out
-                  </motion.button>
-                </motion.div>
-              </>
+                <motion.button
+                  variants={itemVariants}
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer text-left"
+                >
+                  <LogOut className="w-4 h-4 text-rose-550" />
+                  Log Out
+                </motion.button>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>

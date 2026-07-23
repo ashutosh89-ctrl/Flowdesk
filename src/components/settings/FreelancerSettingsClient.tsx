@@ -3,14 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../AppContext';
 import { update } from '../../lib/services/dataService';
 import { User } from '../../lib/types';
-import { User as UserIcon, Shield, Palette, Bell, Save, Check } from 'lucide-react';
+import { User as UserIcon, Shield, Bell, Save } from 'lucide-react';
 
 export function FreelancerSettingsClient() {
-  const { user, setUser, addToast, setThemeAccent } = useApp();
-  const [subTab, setSubTab] = useState<'profile' | 'security' | 'appearance' | 'notifications'>('profile');
+  const { user, setUser, addToast } = useApp();
+  const [subTab, setSubTab] = useState<'profile' | 'security' | 'notifications'>('profile');
   const [name, setName] = useState('');
   const [bio, setBio] = useState('Premium digital designer crafting high-fidelity product workflows.');
-  const [accent, setAccent] = useState<'slate' | 'indigo' | 'emerald'>('slate');
   const [emailDigests, setEmailDigests] = useState(true);
   const [pushNotes, setPushNotes] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,7 +39,6 @@ export function FreelancerSettingsClient() {
   const tabs = [
     { id: 'profile', name: 'Personal Info', icon: UserIcon },
     { id: 'security', name: 'Account Security', icon: Shield },
-    { id: 'appearance', name: 'Appearance', icon: Palette },
     { id: 'notifications', name: 'Notifications', icon: Bell },
   ] as const;
 
@@ -139,41 +137,6 @@ export function FreelancerSettingsClient() {
                 <div className="p-4 border border-emerald-100 bg-emerald-50 text-emerald-800 rounded-2xl flex gap-3 text-xs leading-normal">
                   <span className="font-extrabold uppercase shrink-0">Security Middleware active</span>
                   <span>Your dashboard session is securely locked with dual-mode Supabase credentials verification.</span>
-                </div>
-              </div>
-            )}
-
-            {subTab === 'appearance' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-sm font-bold text-gray-950">Workspace Accent Brand</h3>
-                  <p className="text-xs text-gray-400 font-bold mt-1">Customize the display brand accent color for your FlowDesk dashboard.</p>
-                </div>
-
-                <div className="space-y-3">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Accent Brand Color</span>
-                  <div className="flex gap-3">
-                    {[
-                      { id: 'slate', color: 'bg-gray-900', name: 'Slate Gray', hex: '#1a1a19' },
-                      { id: 'indigo', color: 'bg-indigo-650', name: 'Electric Indigo', hex: '#4f46e5' },
-                      { id: 'emerald', color: 'bg-emerald-650', name: 'Emerald Wave', hex: '#059669' },
-                    ].map((col) => (
-                      <button
-                        key={col.id}
-                        type="button"
-                        onClick={() => {
-                          setAccent(col.id as any);
-                          setThemeAccent(col.hex);
-                          addToast(`Brand accent swapped to ${col.name}!`, 'success');
-                        }}
-                        className={`w-10 h-10 rounded-full cursor-pointer flex items-center justify-center relative shadow-sm hover:scale-105 transition-transform ${col.color}`}
-                      >
-                        {accent === col.id && (
-                          <Check className="w-5 h-5 text-white" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
             )}
