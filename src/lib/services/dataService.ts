@@ -271,7 +271,11 @@ const DEFAULT_DB: Database = {
     {
       id: 'inv_david',
       projectId: 'proj_axiom',
-      invoiceNumber: 'INV-2023-8902',
+      invoiceNumber: 'INV-2026-0001',
+      currency: 'USD',
+      workflowStatus: 'sent',
+      paymentStatus: 'pending',
+      issueDate: '2026-07-01',
       items: [
         { description: 'UX/UI Design - Phase 2', quantity: 45.0, rate: 150.00, amount: 6750.00 },
         { description: 'Mobile App Development', quantity: 30.0, rate: 170.00, amount: 5100.00 },
@@ -288,7 +292,11 @@ const DEFAULT_DB: Database = {
     {
       id: 'inv_marta',
       projectId: 'proj_alpha',
-      invoiceNumber: 'INV-2023-0042',
+      invoiceNumber: 'INV-2026-0002',
+      currency: 'USD',
+      workflowStatus: 'sent',
+      paymentStatus: 'pending',
+      issueDate: '2026-07-10',
       items: [
         { description: 'Development Phase 1', quantity: 1.0, rate: 4250.00, amount: 4250.00 }
       ],
