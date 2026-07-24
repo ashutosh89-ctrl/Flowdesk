@@ -142,6 +142,106 @@ export interface InvoiceReceipt {
   paidAt: string;
 }
 
+export interface UserProfile {
+  id: string;
+  avatar?: string;
+  fullName: string;
+  businessName: string;
+  profession: string;
+  email: string;
+  personalPhone: string;
+  country: string;
+  timeZone: string;
+  language: string;
+}
+
+export interface BusinessSettings {
+  logo?: string;
+  businessName: string;
+  tagline?: string;
+  businessEmail: string;
+  businessPhone: string;
+  portfolioUrl: string;
+  address: string;
+  defaultCurrency: CurrencyCode;
+  taxName: string;
+  defaultTaxRate: number;
+  invoicePrefix: string;
+  defaultDueDateDays: 7 | 15 | 30;
+  defaultReminderSchedule: 'manual_only' | 'on_due_date' | '3_days_before' | '3_days_after';
+  emailSignature?: string;
+}
+
+export interface NotificationSettings {
+  email: {
+    clientAcceptedInvitation: boolean;
+    clientUploadedDocuments: boolean;
+    deliverableApproved: boolean;
+    revisionRequested: boolean;
+    newClientComment: boolean;
+    invoiceViewed: boolean;
+    invoicePaid: boolean;
+    reminderFailed: boolean;
+  };
+  inApp: {
+    enabled: boolean;
+  };
+}
+
+export interface BillingSettings {
+  plan: 'free' | 'pro' | 'studio';
+  priceMonthly: number;
+  renewalDate: string;
+  status: 'active' | 'cancelling' | 'past_due';
+  paymentMethod: {
+    cardBrand: string;
+    last4: string;
+    expiry: string;
+  };
+  history: {
+    id: string;
+    invoiceId: string;
+    date: string;
+    amount: number;
+    currency: CurrencyCode;
+  }[];
+}
+
+export interface WorkspacePreferences {
+  defaultLandingPage: 'dashboard' | 'clients' | 'projects' | 'invoices';
+  clientListView: 'table' | 'grid';
+  dateFormat: 'YYYY-MM-DD' | 'DD/MM/YYYY' | 'MM/DD/YYYY';
+  timeFormat: '12h' | '24h';
+  weekStartsOn: 'Monday' | 'Sunday';
+}
+
+export type SecurityActivityType = 
+  | 'LOGIN' 
+  | 'PASSWORD_CHANGED' 
+  | 'PROFILE_UPDATED' 
+  | 'EMAIL_CHANGED' 
+  | 'SUBSCRIPTION_UPDATED' 
+  | 'LOGOUT' 
+  | 'DEVICE_REMOVED';
+
+export interface SecuritySettings {
+  activeSessions: {
+    id: string;
+    device: string;
+    userAgent: string;
+    ip: string;
+    lastActive: string;
+    isCurrent: boolean;
+  }[];
+  recentActivity: {
+    id: string;
+    type: SecurityActivityType;
+    ip: string;
+    timestamp: string;
+  }[];
+  twoFactorEnabled: boolean;
+}
+
 export interface Comment {
   id: string;
   projectId: string;
