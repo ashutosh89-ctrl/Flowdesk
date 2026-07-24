@@ -96,7 +96,7 @@ export function ClientInvoicesClient({ initialData }: ClientInvoicesClientProps)
   };
 
   return (
-    <div className="p-6 space-y-6 font-sans bg-[#F5F5F3] min-h-screen select-none">
+    <div className="h-full min-h-0 flex-1 overflow-y-auto p-4 md:p-8 space-y-6 font-sans bg-[#F5F5F3] select-none">
       
       {/* Header */}
       <div className="border-b border-black/5 pb-4 bg-white/40 p-4 rounded-2xl">

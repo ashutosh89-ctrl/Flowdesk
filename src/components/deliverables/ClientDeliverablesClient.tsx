@@ -67,7 +67,7 @@ export function ClientDeliverablesClient({ initialData }: ClientDeliverablesClie
   };
 
   return (
-    <div className="p-6 space-y-6 font-sans">
+    <div className="h-full min-h-0 flex-1 overflow-y-auto p-4 md:p-8 space-y-6 font-sans">
       <div className="border-b border-black/5 pb-4">
         <h2 className="text-xl font-bold text-gray-950">Deliverables</h2>
         <p className="text-xs text-gray-550 font-semibold mt-0.5">Review current deliverables, request modifications, or sign off assets.</p>

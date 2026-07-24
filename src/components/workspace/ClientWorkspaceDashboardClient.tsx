@@ -26,7 +26,7 @@ export function ClientWorkspaceDashboardClient({ initialData }: ClientWorkspaceD
   const unpaidInvsCount = invoices.filter(i => i.status === 'pending' || i.status === 'overdue').length;
 
   return (
-    <div className="p-6 space-y-6 font-sans">
+    <div className="h-full min-h-0 flex-1 overflow-y-auto p-4 md:p-8 space-y-6 font-sans">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-950">Welcome, {client.name}</h2>
