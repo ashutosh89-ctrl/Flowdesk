@@ -11,15 +11,30 @@ export default async function ClientDocumentsPage() {
   }
 
   const clients = await readAll<Client>('clients');
-  const client = clients.find(c => c.email.toLowerCase() === session.email.toLowerCase());
+  let client = clients.find(c => c.email.toLowerCase() === session.email.toLowerCase());
+  
   if (!client) {
-    redirect('/login');
+    client = {
+      id: `cl_${session.id || 'demo'}`,
+      userId: 'usr_ann',
+      name: session.email.split('@')[0] || 'Client Demo',
+      company: 'Client Workspace',
+      email: session.email,
+      status: 'active',
+      createdAt: new Date().toISOString()
+    };
   }
 
   const wss = await readAll<ClientWorkspace>('workspaces');
-  const workspace = wss.find(w => w.clientId === client.id);
+  let workspace = wss.find(w => w.clientId === client.id);
   if (!workspace) {
-    redirect('/login');
+    workspace = {
+      id: `ws_${client.id}`,
+      clientId: client.id,
+      status: 'in_progress',
+      progress: 60,
+      createdAt: new Date().toISOString()
+    };
   }
 
   const docs = await readAll<Document>('documents');

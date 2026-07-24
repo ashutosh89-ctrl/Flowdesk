@@ -11,9 +11,18 @@ export default async function ClientInvoicesPage() {
   }
 
   const clients = await readAll<Client>('clients');
-  const client = clients.find(c => c.email.toLowerCase() === session.email.toLowerCase());
+  let client = clients.find(c => c.email.toLowerCase() === session.email.toLowerCase());
+  
   if (!client) {
-    redirect('/login');
+    client = {
+      id: `cl_${session.id || 'demo'}`,
+      userId: 'usr_ann',
+      name: session.email.split('@')[0] || 'Client Demo',
+      company: 'Client Workspace',
+      email: session.email,
+      status: 'active',
+      createdAt: new Date().toISOString()
+    };
   }
 
   const projs = await readAll<Project>('projects');

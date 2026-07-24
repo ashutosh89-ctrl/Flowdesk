@@ -124,7 +124,7 @@ export async function signIn(email: string, password: string): Promise<{ user: U
     }
 
     user = foundUser;
-    token = await createSession({ id: user.id, email: user.email, role: user.role, onboarded: foundUser.onboarded ?? false });
+    token = await createSession({ id: user.id, email: user.email, role: user.role, onboarded: foundUser.onboarded ?? true });
   } else {
     // Real Supabase Auth signIn
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
