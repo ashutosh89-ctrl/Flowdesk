@@ -39,9 +39,9 @@ export default function Sidebar() {
       </button>
 
       <div>
-        {/* Brand Logo Header */}
-        <div className="flex items-center gap-3 px-2 mb-8 mt-2 overflow-hidden h-8">
-          <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-white font-black text-sm shrink-0">
+        {/* Brand Logo Header - Clickable (Priority 9) */}
+        <Link href="/freelancer/dashboard" className="flex items-center gap-3 px-2 mb-8 mt-2 overflow-hidden h-8 group">
+          <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-white font-black text-sm shrink-0 group-hover:bg-gray-800 transition-colors">
             ⚡
           </div>
           {!isCollapsed && (
@@ -53,7 +53,7 @@ export default function Sidebar() {
               Flow<span className="text-gray-400 font-light">Desk</span>
             </motion.span>
           )}
-        </div>
+        </Link>
 
         {/* Navigation Items */}
         <nav className="space-y-1.5 relative">

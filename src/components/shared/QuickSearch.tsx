@@ -31,12 +31,9 @@ export function QuickSearch() {
   const router = useRouter();
   const { setCreateClientOpen, setCreateProjectOpen, setCreateInvoiceOpen } = useApp();
 
+  // Note: ⌘K is handled by CommandPalette. QuickSearch opens only from direct interaction (not keyboard shortcut).
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsOpen(true);
-      }
       if (e.key === 'Escape') setIsOpen(false);
     };
     window.addEventListener('keydown', handleKeyDown);

@@ -3,7 +3,9 @@ import React, { useState } from 'react';
 import { useApp } from '../AppContext';
 import { approveDeliverable, requestRevision } from '../../lib/services/deliverableService';
 import { Client, Project, Deliverable } from '../../lib/types';
-import { Layers, X, Play, Loader2 } from 'lucide-react';
+import { Layers, X, Play, Loader2, Eye, Download } from 'lucide-react';
+import { FilePreviewModal } from '@/components/shared/FilePreviewModal';
+import { handleFileDownload } from '@/lib/utils/fileUtils';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ClientDeliverablesClientProps {
@@ -24,6 +26,11 @@ export function ClientDeliverablesClient({ initialData }: ClientDeliverablesClie
   const [showRevisionModal, setShowRevisionModal] = useState<string | null>(null);
   const [revisionFeedback, setRevisionFeedback] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [previewItem, setPreviewItem] = useState<Deliverable | null>(null);
+
+  const handleDownload = (fileUrl: string | undefined, fileName: string) => {
+    handleFileDownload(fileUrl, fileName);
+  };
 
   const loadData = async () => {
     if (!project) return;
@@ -86,13 +93,25 @@ export function ClientDeliverablesClient({ initialData }: ClientDeliverablesClie
                     <h4 className="text-xs font-bold text-gray-900">{del.name}</h4>
                     <span className="text-[9px] font-bold text-gray-400">Ver {del.version}</span>
                   </div>
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider inline-block ${
-                    del.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                    del.status === 'revision_requested' ? 'bg-red-50 text-red-750 border-red-150/30' :
-                    'bg-amber-50 text-amber-700 border-amber-100'
-                  }`}>
-                    {del.status.replace('_', ' ')}
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider inline-block ${
+                      del.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                      del.status === 'revision_requested' ? 'bg-red-50 text-red-750 border-red-150/30' :
+                      'bg-amber-50 text-amber-700 border-amber-100'
+                    }`}>
+                      {del.status.replace('_', ' ')}
+                    </span>
+                    {del.fileUrl && del.fileUrl !== '#' && (
+                      <div className="flex gap-1">
+                        <button onClick={() => setPreviewItem(del)} className="p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Preview">
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDownload(del.fileUrl, del.name)} className="p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Download">
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))
             )}
@@ -200,6 +219,15 @@ export function ClientDeliverablesClient({ initialData }: ClientDeliverablesClie
           </div>
         )}
       </AnimatePresence>
+
+      {/* File Preview Modal (Priority 6) */}
+      <FilePreviewModal
+        isOpen={!!previewItem}
+        onClose={() => setPreviewItem(null)}
+        fileUrl={previewItem?.fileUrl}
+        fileName={previewItem?.name || 'Deliverable'}
+        fileType=""
+      />
     </div>
   );
 }

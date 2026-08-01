@@ -6,18 +6,25 @@ export interface CreateProjectInput {
   clientId: string;
   name: string;
   description?: string;
+  status?: string;
   dueDate?: string;
+  milestones?: any[];
 }
 
 export async function createProject(data: CreateProjectInput): Promise<Project> {
+  const status = (data.status as Project['status']) || 'planning';
+  const progressMap: Record<string, number> = { planning: 0, in_progress: 33, review: 66, completed: 100 };
+  const initialProgress = progressMap[status] ?? 0;
+
   const newProject: Project = {
     id: `proj_${Math.random().toString(36).substring(2, 9)}`,
     clientId: data.clientId,
     name: data.name,
     description: data.description,
-    status: 'planning',
+    status: status,
     dueDate: data.dueDate,
-    progress: 0,
+    progress: initialProgress,
+    milestones: data.milestones || [],
     createdAt: new Date().toISOString()
   };
 

@@ -7,7 +7,7 @@ import CreateInvoiceModal from './CreateInvoiceModal';
 import InvoiceDetailModal from './InvoiceDetailModal';
 import { 
   Plus, Search, Calendar, AlertTriangle, FileText, 
-  DollarSign, Clock, CheckCircle2, Eye, ShieldAlert, ArrowUpDown, Filter, ChevronLeft, ChevronRight 
+  DollarSign, Clock, CheckCircle2, Eye, ShieldAlert, ArrowUpDown, Filter, ChevronLeft, ChevronRight, X 
 } from 'lucide-react';
 
 interface InvoicesClientProps {
@@ -162,8 +162,7 @@ export function InvoicesClient({ initialInvoices, initialProjects, initialClient
       {/* 1. Dashboard Metrics Bar */}
       <div className="p-6 border-b border-black/5 bg-white/40 shrink-0">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="p-4 bg-white border border-black/5 rounded-2xl shadow-xs">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 block">Lifetime Revenue</span>
+          <div className="p-4 bg-white border border-black/5 rounded-2xl shadow-xs">                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 block">Lifetime Revenue</span>
             <span className="text-xl font-black text-gray-950 mt-1 block">
               ₹{metrics.lifetimeRevenue.toLocaleString()}
             </span>
@@ -204,14 +203,23 @@ export function InvoicesClient({ initialInvoices, initialProjects, initialClient
         
         {/* Search Input */}
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <input
             type="text"
             placeholder="Search by Invoice #, client, project, amount..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            className="w-full pl-10 pr-4 py-2 bg-white border border-black/10 rounded-full text-xs font-semibold text-gray-900 focus:outline-none focus:border-gray-950 transition-all placeholder-gray-400"
+            className="w-full pl-10 pr-10 py-2 bg-white border border-black/10 rounded-full text-xs font-semibold text-gray-900 focus:outline-none focus:border-gray-950 transition-all placeholder-gray-400"
           />
+          {search && (
+            <button
+              onClick={() => { setSearch(''); setCurrentPage(1); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Filter Tabs & Sorting */}
@@ -267,7 +275,7 @@ export function InvoicesClient({ initialInvoices, initialProjects, initialClient
           <div className="py-20 text-center">
             <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <h3 className="text-sm font-extrabold text-gray-950">No Invoices Found</h3>
-            <p className="text-xs text-gray-400 font-semibold mt-1">Create your first invoice or try adjusting your search filters.</p>
+            <p className="text-xs text-gray-500 font-semibold mt-1">Create your first invoice or try adjusting your search filters.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -310,7 +318,7 @@ export function InvoicesClient({ initialInvoices, initialProjects, initialClient
                     <h3 className="text-sm font-extrabold text-gray-950 group-hover:text-black line-clamp-1 mb-0.5">
                       {inv.title || getProjectName(inv.projectId)}
                     </h3>
-                    <p className="text-xs text-gray-400 font-semibold mb-4 truncate">
+                    <p                    className="text-xs text-gray-500 font-semibold mb-4 truncate">
                       {getClientName(inv.projectId, inv.clientId)}
                     </p>
 

@@ -16,9 +16,13 @@ export interface Client {
   company: string;
   email: string;
   phone?: string;
-  status: 'active' | 'archived' | 'onboarding' | 'lead' | 'waiting' | 'completed' | string;
+  status: 'lead' | 'invited' | 'active' | 'waiting' | 'completed' | 'archived' | string;
+  isPinned?: boolean;
+  notes?: string;
+  tags?: string[];
   avatar?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface ClientWorkspace {
@@ -29,26 +33,54 @@ export interface ClientWorkspace {
   createdAt: string;
 }
 
+export interface Milestone {
+  id: string;
+  projectId: string;
+  name: string;
+  completed: boolean;
+  dueDate?: string;
+  createdAt: string;
+}
+
 export interface Project {
   id: string;
   clientId: string;
   name: string;
   description?: string;
-  status: 'planning' | 'in_progress' | 'review' | 'completed';
+  status: 'planning' | 'in_progress' | 'review' | 'completed' | string;
   dueDate?: string;
   progress: number;
+  isPinned?: boolean;
+  milestones?: Milestone[];
   createdAt: string;
+  updatedAt?: string;
+}
+
+export interface Template {
+  id: string;
+  userId: string;
+  type: 'document_request' | 'invoice_note' | 'email_signature' | 'project_description';
+  name: string;
+  content: string;
+  isDefault?: boolean;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Document {
   id: string;
   workspaceId: string;
+  clientId?: string;
+  projectId?: string;
   name: string;
   title?: string;
-  type: 'pdf' | 'png' | 'jpg' | 'docx' | string;
+  type: 'pdf' | 'png' | 'jpg' | 'docx' | 'logo' | 'contract' | 'reference' | string;
   fileType?: string;
+  fileName?: string;
   fileSize?: string;
-  status: 'pending' | 'uploaded' | 'verified' | 'rejected' | 'signed' | 'reviewed' | 'draft' | 'approved' | 'archived';
+  status: 'pending' | 'uploaded' | 'verified' | 'rejected' | 'signed' | 'reviewed' | 'draft' | 'approved' | 'archived' | string;
+  rejectReason?: string;
+  uploadedBy?: 'freelancer' | 'client' | string;
   fileUrl?: string;
   uploadedAt?: string;
   createdAt: string;
@@ -57,12 +89,14 @@ export interface Document {
 export interface Deliverable {
   id: string;
   projectId: string;
+  clientId?: string;
   name: string;
   title?: string;
   description?: string;
   fileUrl?: string;
-  version: string;
-  status: 'pending' | 'approved' | 'revision_requested' | 'pending_approval';
+  fileName?: string;
+  version: number | string;
+  status: 'pending' | 'pending_review' | 'approved' | 'revision_requested' | 'pending_approval' | string;
   revisionComment?: string;
   createdAt: string;
 }
@@ -101,6 +135,9 @@ export interface Invoice {
   dueDate: string;
   sentAt?: string | null;
   viewedAt?: string | null;
+  paidAt?: string | null;
+  reminderCount?: number;
+  lineItems?: InvoiceItem[];
   createdAt: string;
   updatedAt?: string;
 
@@ -170,6 +207,13 @@ export interface BusinessSettings {
   defaultDueDateDays: 7 | 15 | 30;
   defaultReminderSchedule: 'manual_only' | 'on_due_date' | '3_days_before' | '3_days_after';
   emailSignature?: string;
+  // Bank & Payment Details (for invoice print)
+  bankName?: string;
+  accountNumber?: string;
+  bankCode?: string;        // IFSC, SWIFT, Sort Code, etc.
+  branch?: string;
+  upiId?: string;
+  termsAndConditions?: string;
 }
 
 export interface NotificationSettings {
@@ -244,11 +288,17 @@ export interface SecuritySettings {
 
 export interface Comment {
   id: string;
-  projectId: string;
-  userId: string;
-  userName: string;
+  clientId?: string;
+  workspaceId?: string;
+  projectId?: string;
+  deliverableId?: string;
+  authorId?: string;
+  authorRole?: 'freelancer' | 'client' | string;
+  userId?: string;
+  userName?: string;
   userAvatar?: string;
   content: string;
+  parentId?: string;
   createdAt: string;
 }
 

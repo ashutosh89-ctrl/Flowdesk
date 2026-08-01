@@ -10,6 +10,8 @@ interface AppContextType {
   setUser: (user: User | null) => void;
   activeClientId: string | null;
   setActiveClientId: (id: string | null) => void;
+  activeProjectId?: string | null;
+  setActiveProjectId?: (id: string | null) => void;
   activeInvoiceId: string | null;
   setActiveInvoiceId: (id: string | null) => void;
   clients: Client[];
@@ -41,6 +43,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user, setUserState] = useState<User | null>(null);
   const [activeClientId, setActiveClientId] = useState<string | null>(null);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -115,6 +118,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUser,
     activeClientId,
     setActiveClientId,
+    activeProjectId,
+    setActiveProjectId,
     activeInvoiceId,
     setActiveInvoiceId,
     clients,
@@ -139,6 +144,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }), [
     user,
     activeClientId,
+    activeProjectId,
     activeInvoiceId,
     clients,
     toasts,

@@ -75,7 +75,7 @@ export function ActivityTab({ workspaceId, activities }: { workspaceId?: string;
             <div key={e.id} className="bg-white rounded-xl p-3 border border-black/5 flex items-center justify-between text-xs">
               <span className="font-semibold text-gray-800">{e.description}</span>
               <span className="text-[10px] text-gray-400 font-bold">
-                {new Date(e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {new Date(e.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
           ))}

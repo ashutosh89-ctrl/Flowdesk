@@ -1,9 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { jwtVerify } from 'jose';
+import { verifySession } from '@/lib/utils/session';
 import InviteClient from '@/components/invite/InviteClient';
-
-const SECRET = new TextEncoder().encode(process.env.SESSION_SECRET || 'dev-secret-change-in-production');
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -12,12 +10,9 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   
   // If already logged in, redirect to workspace
   if (sessionCookie) {
-    try {
-      const { payload } = await jwtVerify(sessionCookie, SECRET, { clockTolerance: 60 });
-      const user = payload as { id: string; email: string; role: string };
+    const user = await verifySession(sessionCookie);
+    if (user) {
       redirect(user.role === 'freelancer' ? '/freelancer/dashboard' : '/client/workspace');
-    } catch {
-      // Invalid session, continue to invite
     }
   }
   

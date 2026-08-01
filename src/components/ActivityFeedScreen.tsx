@@ -229,7 +229,7 @@ export default function ActivityFeedScreen() {
                           {date.toLocaleDateString([], { month: 'short', day: 'numeric' })}
                         </span>
                         <span className="text-[10px] font-bold text-gray-400 block mt-0.5">
-                          {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     </div>

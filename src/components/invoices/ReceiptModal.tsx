@@ -28,7 +28,7 @@ export default function ReceiptModal({ isOpen, onClose, receipt, invoice, client
 ==================================================
 Receipt #:     ${receipt.receiptNumber}
 Invoice #:     ${invoice.invoiceNumber}
-Date Paid:     ${new Date(receipt.paidAt).toLocaleDateString()}
+Date Paid:     ${new Date(receipt.paidAt).toLocaleDateString('en-US')}
 Client:        ${client?.name || 'Valued Client'} (${client?.company || ''})
 --------------------------------------------------
 Payment Method: ${receipt.paymentMethod}

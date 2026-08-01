@@ -26,9 +26,9 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const ip = request.headers.get('x-forwarded-for') ?? '127.0.0.1';
 
-  // Rate limit auth routes: 5 requests per minute
+  // Rate limit auth routes: 15 requests per minute (slightly higher to avoid rate limiting dev/testing)
   if (path.startsWith('/api/auth/')) {
-    if (isRateLimited(ip, 5, 60000)) {
+    if (isRateLimited(ip, 15, 60000)) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
         { status: 429, headers: { 'Retry-After': '60' } }
@@ -46,8 +46,24 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Public routes — no session required
-  const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/api/auth/login', '/api/auth/signup'];
+  // Handle redirect from /client/portal alias to /client/workspace
+  if (path === '/client/portal' || path.startsWith('/client/portal/')) {
+    return NextResponse.redirect(new URL(path.replace('/client/portal', '/client/workspace'), request.url));
+  }
+
+  // Check session cookie
+  const sessionCookie = request.cookies.get('session')?.value;
+  const user = sessionCookie ? await verifySession(sessionCookie) : null;
+
+  // Public routes — if already logged in and on /login or /signup, redirect to dashboard
+  const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password', '/invite', '/auth/callback', '/api/auth/login', '/api/auth/signup'];
+  const isAuthPage = path === '/login' || path === '/signup';
+
+  if (isAuthPage && user) {
+    const redirectPath = user.role === 'client' ? '/client/workspace' : '/freelancer/dashboard';
+    return NextResponse.redirect(new URL(redirectPath, request.url));
+  }
+
   if (publicPaths.some(p => path.startsWith(p))) {
     return NextResponse.next();
   }
@@ -56,10 +72,6 @@ export async function middleware(request: NextRequest) {
   if (path.startsWith('/api/')) {
     return NextResponse.next();
   }
-
-  // Check session cookie for protected page routes
-  const sessionCookie = request.cookies.get('session')?.value;
-  const user = sessionCookie ? await verifySession(sessionCookie) : null;
 
   // No session → redirect to login
   if (!user) {
@@ -82,3 +94,4 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/api/:path*', '/((?!_next/static|_next/image|favicon.ico|.*\\.png$).*)'],
 };
+

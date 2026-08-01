@@ -1,32 +1,23 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { jwtVerify } from 'jose';
+import { verifySession } from '@/lib/utils/session';
 import OnboardingClient from '@/components/onboarding/OnboardingClient';
-
-const SECRET = new TextEncoder().encode(process.env.SESSION_SECRET || 'dev-secret-change-in-production');
 
 export default async function OnboardingPage() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get('session')?.value;
   
-  if (!sessionCookie) {
+  const user = sessionCookie ? await verifySession(sessionCookie) : null;
+  if (!user) {
     redirect('/login');
   }
   
-  let onboarded = false;
-  let role = 'freelancer';
-  try {
-    const { payload } = await jwtVerify(sessionCookie, SECRET, { clockTolerance: 60 });
-    const user = payload as { id: string; email: string; role: string; onboarded?: boolean };
-    onboarded = user.onboarded || false;
-    role = user.role;
-    
-    // If already onboarded, skip to dashboard
-    if (onboarded) {
-      redirect(role === 'freelancer' ? '/freelancer/dashboard' : '/client/workspace');
-    }
-  } catch {
-    redirect('/login');
+  const onboarded = user.onboarded || false;
+  const role = user.role;
+  
+  // If already onboarded, skip to dashboard
+  if (onboarded) {
+    redirect(role === 'freelancer' ? '/freelancer/dashboard' : '/client/workspace');
   }
   
   return (

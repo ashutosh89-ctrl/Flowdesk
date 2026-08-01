@@ -4,9 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Invoice, Client, Project, InvoiceActivity, InvoiceReminder, InvoiceReceipt 
 } from '@/lib/types';
-import { 
-  getCurrencySymbol, formatCurrency 
-} from '@/lib/utils/currency';
+import { getCurrencySymbol } from '@/lib/utils/currency';
 import { 
   sendInvoice, sendInvoiceReminder, markPaidOffline, duplicateInvoice, 
   getInvoiceActivities, getInvoiceReminders, getInvoiceReceipt 
@@ -17,7 +15,9 @@ import {
   X, Send, Bell, CheckCircle2, Download, Printer, Copy, CreditCard, 
   Clock, Eye, FileText, AlertTriangle, ChevronDown 
 } from 'lucide-react';
+import RazorpayCheckout from '@/components/ui/RazorpayCheckout';
 import { motion } from 'motion/react';
+import { InvoicePrintView } from './InvoicePrintView';
 
 interface InvoiceDetailModalProps {
   isOpen: boolean;
@@ -31,7 +31,7 @@ interface InvoiceDetailModalProps {
 export default function InvoiceDetailModal({
   isOpen, onClose, invoice, projects, clients, onRefresh
 }: InvoiceDetailModalProps) {
-  const { addToast } = useApp();
+  const { addToast, user } = useApp();
 
   const [activities, setActivities] = useState<InvoiceActivity[]>([]);
   const [reminders, setReminders] = useState<InvoiceReminder[]>([]);
@@ -175,6 +175,24 @@ export default function InvoiceDetailModal({
                 </button>
               )}
 
+              {!isPaid && !isDraft && currentInvoice.workflowStatus !== 'cancelled' && (
+                <RazorpayCheckout
+                  invoiceId={currentInvoice.id}
+                  invoiceNumber={currentInvoice.invoiceNumber}
+                  amount={currentInvoice.total}
+                  currency={currentInvoice.currency}
+                  businessName={(user as any)?.businessName || 'FlowDesk'}
+                  clientEmail={client?.email}
+                  clientPhone={client?.phone}
+                  onSuccess={() => {
+                    if (onRefresh) onRefresh();
+                    loadDetails(currentInvoice.id);
+                    setLoading(false);
+                  }}
+                  onError={() => setLoading(false)}
+                />
+              )}
+
               {!isPaid && !isDraft && (
                 <div className="relative">
                   <button
@@ -241,6 +259,27 @@ export default function InvoiceDetailModal({
               )}
 
               <button
+                onClick={async () => {
+                  try {
+                    addToast('Generating PDF document...', 'info');
+                    const { downloadInvoicePDF } = await import('@/lib/utils/pdfDownload');
+                    const { getFullSettings } = await import('@/lib/services/settingsService');
+                    const fullSettings = await getFullSettings();
+                    await downloadInvoicePDF(currentInvoice, fullSettings.business, client);
+                    addToast('Invoice PDF downloaded successfully!', 'success');
+                  } catch (e: any) {
+                    console.error('PDF download error:', e);
+                    addToast('Failed to generate PDF. Using print mode as fallback.', 'warning');
+                    window.print();
+                  }
+                }}
+                className="p-2 border border-black/10 hover:bg-gray-100 rounded-full text-gray-600 transition-colors cursor-pointer"
+                title="Download PDF"
+              >
+                <Download className="w-4 h-4" />
+              </button>
+
+              <button
                 onClick={handleDuplicate}
                 className="p-2 border border-black/10 hover:bg-gray-100 rounded-full text-gray-600 transition-colors cursor-pointer"
                 title="Duplicate Invoice"
@@ -268,103 +307,13 @@ export default function InvoiceDetailModal({
           {/* Modal Split View */}
           <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            {/* Left: Printable Invoice Preview (8 cols) */}
-            <div className="lg:col-span-8 space-y-6 bg-gray-50 border border-black/5 p-6 rounded-2xl print:bg-white print:border-none print:p-0">
-              
-              {/* Invoice Branding Header */}
-              <div className="flex justify-between items-start border-b border-black/10 pb-6">
-                <div>
-                  <h2 className="text-xl font-black text-gray-950 tracking-tight">INVOICE</h2>
-                  <p className="text-xs font-mono font-bold text-gray-500 mt-1">#{currentInvoice.invoiceNumber}</p>
-                </div>
-                <div className="text-right">
-                  <h3 className="text-sm font-extrabold text-gray-900">FlowDesk Freelance Workspace</h3>
-                  <p className="text-xs text-gray-500 font-semibold mt-0.5">Verified Partner Merchant</p>
-                </div>
-              </div>
-
-              {/* Billed To & Dates */}
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Billed To</span>
-                  <p className="font-extrabold text-gray-900 text-sm mt-0.5">{client?.name || 'Valued Client'}</p>
-                  <p className="text-gray-500 font-semibold">{client?.company}</p>
-                  <p className="text-gray-400 font-mono text-[11px]">{currentInvoice.clientEmailSnapshot || client?.email}</p>
-                </div>
-                <div className="text-right space-y-1">
-                  <div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Issue Date: </span>
-                    <span className="font-semibold text-gray-900">{currentInvoice.issueDate}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Due Date: </span>
-                    <span className="font-extrabold text-gray-950">{currentInvoice.dueDate}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Currency: </span>
-                    <span className="font-bold text-gray-900">{currentInvoice.currency} ({currencySymbol})</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Line Items Table */}
-              <div className="overflow-hidden border border-black/5 rounded-xl bg-white">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-100/70 border-b border-black/5 text-[10px] uppercase font-bold text-gray-500">
-                    <tr>
-                      <th className="py-2.5 px-4">Description</th>
-                      <th className="py-2.5 px-4 text-center">Qty</th>
-                      <th className="py-2.5 px-4 text-right">Rate</th>
-                      <th className="py-2.5 px-4 text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-black/5 font-semibold text-gray-800">
-                    {currentInvoice.items.map((item, i) => (
-                      <tr key={i}>
-                        <td className="py-3 px-4 text-gray-900 font-bold">{item.description}</td>
-                        <td className="py-3 px-4 text-center font-mono">{item.quantity}</td>
-                        <td className="py-3 px-4 text-right font-mono">{currencySymbol}{(item.rate || 0).toLocaleString()}</td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-gray-950">
-                          {currencySymbol}{((item.quantity || 0) * (item.rate || 0)).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Summary Totals */}
-              <div className="flex justify-end pt-2">
-                <div className="w-64 space-y-1.5 text-xs font-semibold text-gray-500">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span className="font-bold text-gray-900 font-mono">{currencySymbol}{currentInvoice.subtotal.toLocaleString()}</span>
-                  </div>
-                  {currentInvoice.discount ? (
-                    <div className="flex justify-between text-emerald-700">
-                      <span>Discount:</span>
-                      <span className="font-bold font-mono">-{currencySymbol}{currentInvoice.discount.toLocaleString()}</span>
-                    </div>
-                  ) : null}
-                  <div className="flex justify-between">
-                    <span>{currentInvoice.taxName || 'GST'} ({currentInvoice.taxRate || 18}%):</span>
-                    <span className="font-bold text-gray-900 font-mono">{currencySymbol}{currentInvoice.taxAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="h-px bg-black/10 my-1" />
-                  <div className="flex justify-between text-sm">
-                    <span className="font-extrabold text-gray-950">Grand Total:</span>
-                    <span className="font-black text-gray-950 font-mono text-base">{currencySymbol}{currentInvoice.total.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              {currentInvoice.notes && (
-                <div className="p-3.5 bg-white border border-black/5 rounded-xl text-xs space-y-1">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Notes & Payment Instructions</span>
-                  <p className="text-gray-700 font-medium whitespace-pre-wrap">{currentInvoice.notes}</p>
-                </div>
-              )}
+            {/* Left: Professional Invoice Print View (8 cols) */}
+            <div id="invoice-print-area" className="lg:col-span-8 space-y-6 bg-white border border-black/5 p-6 rounded-2xl print:bg-white print:border-none print:p-0 max-h-[70vh] overflow-y-auto">
+              <InvoicePrintView 
+                invoice={currentInvoice}
+                client={client}
+                project={project}
+              />
             </div>
 
             {/* Right: Activity & Reminder History (4 cols) */}
@@ -377,7 +326,7 @@ export default function InvoiceDetailModal({
                   <span className="text-gray-500 font-medium">Viewed Status:</span>
                   <span className="font-bold text-gray-900 flex items-center gap-1">
                     <Eye className="w-3.5 h-3.5 text-gray-400" />
-                    {currentInvoice.viewedAt ? `Viewed (${new Date(currentInvoice.viewedAt).toLocaleDateString()})` : 'Not Viewed'}
+                    {currentInvoice.viewedAt ? `Viewed (${new Date(currentInvoice.viewedAt).toLocaleDateString('en-US')})` : 'Not Viewed'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
@@ -425,7 +374,7 @@ export default function InvoiceDetailModal({
                       <div className="w-2 h-2 rounded-full bg-gray-900 mt-1.5 shrink-0" />
                       <div>
                         <p className="font-semibold text-gray-900 leading-tight">{act.description}</p>
-                        <span className="text-[10px] text-gray-400 font-medium">{new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="text-[10px] text-gray-400 font-medium">{new Date(act.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     </div>
                   ))}

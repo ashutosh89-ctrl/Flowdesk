@@ -3,14 +3,23 @@ import { motion } from 'motion/react';
 import { useApp } from './AppContext';
 import { signIn, signUp } from '../lib/services/authService';
 import { LogIn, UserPlus, KeyRound, Mail, Sparkles, User as UserIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function AuthScreen() {
+  const router = useRouter();
   const { setUser, addToast } = useApp();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const targetUrlForUser = (user: { role: string; onboarded?: boolean }) =>
+    user.onboarded === false
+      ? '/onboarding'
+      : user.role === 'freelancer'
+        ? '/freelancer/dashboard'
+        : '/client/workspace';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,10 +34,12 @@ export default function AuthScreen() {
         const res = await signIn(email, password);
         setUser(res.user);
         addToast(`Welcome back, ${res.user.name}!`);
+        router.push(targetUrlForUser(res.user));
       } else {
         const res = await signUp(email, password, name);
         setUser(res.user);
         addToast(`Account created successfully! Welcome, ${res.user.name}.`);
+        router.push(targetUrlForUser(res.user));
       }
     } catch (err: any) {
       addToast(err.message || 'Authentication failed', 'warning');
@@ -44,6 +55,7 @@ export default function AuthScreen() {
       const res = await signIn(targetEmail, 'password');
       setUser(res.user);
       addToast(`Quick logged in as ${res.user.name} (${res.user.role})`);
+      router.push(targetUrlForUser(res.user));
     } catch (err: any) {
       addToast(err.message || 'Quick login failed', 'warning');
     } finally {

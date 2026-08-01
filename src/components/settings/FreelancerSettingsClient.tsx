@@ -367,6 +367,24 @@ export function FreelancerSettingsClient() {
                   <label className="absolute left-4 top-1 text-[9px] text-gray-400 font-bold uppercase">Portfolio URL</label>
                 </div>
 
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={settings.business.address}
+                    onChange={(e) => updateBusiness('address', e.target.value)}
+                    className="peer w-full h-11 px-4 pt-4 pb-1 bg-white border border-black/10 rounded-xl text-xs font-bold text-gray-950 focus:outline-none"
+                  />
+                  <label className="absolute left-4 top-1 text-[9px] text-gray-400 font-bold uppercase">Business Address</label>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={settings.business.businessPhone}
+                    onChange={(e) => updateBusiness('businessPhone', e.target.value)}
+                    className="peer w-full h-11 px-4 pt-4 pb-1 bg-white border border-black/10 rounded-xl text-xs font-bold text-gray-950 focus:outline-none"
+                  />
+                  <label className="absolute left-4 top-1 text-[9px] text-gray-400 font-bold uppercase">Business Phone</label>
+                </div>
                 <div className="relative md:col-span-2">
                   <input
                     type="text"
@@ -431,6 +449,76 @@ export function FreelancerSettingsClient() {
                   className="w-full px-4 pt-5 pb-2 bg-white border border-black/10 rounded-xl text-xs font-medium focus:outline-none resize-none"
                 />
                 <label className="absolute left-4 top-1 text-[9px] text-gray-400 font-bold uppercase">Reusable Email Signature</label>
+              </div>
+
+              {/* Bank & Payment Details (for Invoice Print) */}
+              <div className="p-4 bg-gray-50 border border-black/5 rounded-2xl space-y-4">
+                <h4 className="text-xs font-extrabold text-gray-950 uppercase tracking-wider">Bank & Payment Details (Invoice Print)</h4>
+                <p className="text-[10px] text-gray-400 font-medium">These details appear on printed invoices. Leave blank to hide the section.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={settings.business.bankName || ''}
+                      onChange={(e) => updateBusiness('bankName', e.target.value)}
+                      placeholder="e.g., First National Bank"
+                      className="w-full h-11 px-3 pt-4 pb-1 bg-white border border-black/10 rounded-xl text-xs font-bold focus:outline-none"
+                    />
+                    <label className="absolute left-3 top-1 text-[9px] text-gray-400 font-bold uppercase">Bank Name</label>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={settings.business.accountNumber || ''}
+                      onChange={(e) => updateBusiness('accountNumber', e.target.value)}
+                      placeholder="e.g., 123456789012"
+                      className="w-full h-11 px-3 pt-4 pb-1 bg-white border border-black/10 rounded-xl text-xs font-bold font-mono focus:outline-none"
+                    />
+                    <label className="absolute left-3 top-1 text-[9px] text-gray-400 font-bold uppercase">Account Number</label>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={settings.business.bankCode || ''}
+                      onChange={(e) => updateBusiness('bankCode', e.target.value)}
+                      placeholder="e.g., IFSC/SWIFT/Sort Code"
+                      className="w-full h-11 px-3 pt-4 pb-1 bg-white border border-black/10 rounded-xl text-xs font-bold font-mono focus:outline-none"
+                    />
+                    <label className="absolute left-3 top-1 text-[9px] text-gray-400 font-bold uppercase">Bank Code (IFSC/SWIFT)</label>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={settings.business.branch || ''}
+                      onChange={(e) => updateBusiness('branch', e.target.value)}
+                      placeholder="e.g., San Francisco Main Branch"
+                      className="w-full h-11 px-3 pt-4 pb-1 bg-white border border-black/10 rounded-xl text-xs font-bold focus:outline-none"
+                    />
+                    <label className="absolute left-3 top-1 text-[9px] text-gray-400 font-bold uppercase">Branch</label>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={settings.business.upiId || ''}
+                      onChange={(e) => updateBusiness('upiId', e.target.value)}
+                      placeholder="e.g., flowdesk@upi"
+                      className="w-full h-11 px-3 pt-4 pb-1 bg-white border border-black/10 rounded-xl text-xs font-bold font-mono focus:outline-none"
+                    />
+                    <label className="absolute left-3 top-1 text-[9px] text-gray-400 font-bold uppercase">UPI ID / Payment Link</label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms & Conditions (for Invoice Print) */}
+              <div className="relative">
+                <textarea
+                  rows={4}
+                  value={settings.business.termsAndConditions || ''}
+                  onChange={(e) => updateBusiness('termsAndConditions', e.target.value)}
+                  placeholder="1. Payment is due by the date specified above.&#10;2. Please mention Invoice Number on all payment transfers.&#10;3. Late payments may incur additional charges."
+                  className="w-full px-4 pt-5 pb-2 bg-white border border-black/10 rounded-xl text-xs font-medium focus:outline-none resize-none"
+                />
+                <label className="absolute left-4 top-1 text-[9px] text-gray-400 font-bold uppercase">Terms & Conditions (Invoice Footer)</label>
               </div>
             </div>
           )}

@@ -33,7 +33,9 @@ const ActivityTab = dynamic(() => import('./tabs/ActivityTab').then(m => m.Activ
   loading: () => <Skeleton variant="card" className="h-96 w-full" />,
 });
 
-import { Briefcase, FileText, Layers, MessageSquare, Clock, CreditCard, Sparkles } from 'lucide-react';
+import { Briefcase, FileText, Layers, MessageSquare, Clock, CreditCard, Sparkles, UploadCloud, X, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { createDeliverable } from '@/lib/services/deliverableService';
 
 interface FreelancerWorkspaceClientProps {
   initialData: {
@@ -69,6 +71,11 @@ export function FreelancerWorkspaceClient({ initialData }: FreelancerWorkspaceCl
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [commentLoading, setCommentLoading] = useState(false);
+  const [uploadName, setUploadName] = useState('');
+  const [uploadVersion, setUploadVersion] = useState('');
+  const [uploadNotes, setUploadNotes] = useState('');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const handleChecklistToggle = async (docId: string, currentStatus: AppDocument['status']) => {
     const nextStatus: AppDocument['status'] = currentStatus === 'verified' ? 'pending' : 'verified';
@@ -165,6 +172,39 @@ export function FreelancerWorkspaceClient({ initialData }: FreelancerWorkspaceCl
     }
   };
 
+  const handleUploadDeliverable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadName || !project) return;
+    
+    setUploading(true);
+    const latestVersion = deliverables
+      .map(d => parseFloat(String(d.version)) || 0)
+      .reduce((max, v) => Math.max(max, v), 0);
+    const nextVersion = uploadVersion || String(latestVersion + 1);
+    
+    try {
+      const saved = await createDeliverable({
+        projectId: project.id,
+        name: uploadName,
+        version: nextVersion,
+        fileUrl: '#',
+        file: uploadFile || undefined
+      });
+      
+      setDeliverables(prev => [saved, ...prev]);
+      addToast(`Deliverable "${uploadName}" uploaded!`, 'success');
+      setShowUploadModal(false);
+      setUploadName('');
+      setUploadVersion('');
+      setUploadNotes('');
+      setUploadFile(null);
+    } catch (err) {
+      addToast('Failed to upload deliverable.', 'warning');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const checklistDocs = documents.filter(d => ['signed', 'approved', 'verified', 'reviewed'].includes(d.status) || d.status === 'pending');
   const completedChecklistDocs = checklistDocs.filter(d => d.status !== 'pending');
   const checklistProgress = checklistDocs.length > 0 ? Math.round((completedChecklistDocs.length / checklistDocs.length) * 100) : 0;
@@ -208,11 +248,128 @@ export function FreelancerWorkspaceClient({ initialData }: FreelancerWorkspaceCl
         {activeTab === 'overview' && <OverviewTab client={client} project={project} documents={documents} checklistProgress={checklistProgress} completedChecklistDocs={completedChecklistDocs} checklistDocs={checklistDocs} onChecklistToggle={handleChecklistToggle} />}
         {activeTab === 'timeline' && <TimelineTab activities={initialData.activities} />}
         {activeTab === 'documents' && <DocumentsTab documents={documents} dragOver={dragOver} setDragOver={setDragOver} setShowUploadModal={setShowUploadModal} onChecklistToggle={handleChecklistToggle} />}
-        {activeTab === 'deliverables' && <DeliverablesTab deliverables={deliverables} onApprove={handleApproveDeliverable} onRequestRevisionModal={setShowRevisionModal} />}
+        {activeTab === 'deliverables' && <DeliverablesTab deliverables={deliverables} onApprove={handleApproveDeliverable} onRequestRevisionModal={setShowRevisionModal} onUploadDeliverable={() => setShowUploadModal(true)} />}
         {activeTab === 'comments' && <CommentsTab comments={comments} user={user} newCommentText={newCommentText} setNewCommentText={setNewCommentText} commentLoading={commentLoading} onSendComment={handleSendComment} />}
-        {activeTab === 'invoices' && <InvoicesTab invoices={invoices} onMarkPaid={handleMarkPaid} />}
+        {activeTab === 'invoices' && <InvoicesTab invoices={invoices} client={client} projects={project ? [project] : []} onMarkPaid={handleMarkPaid} />}
         {activeTab === 'activity' && <ActivityTab activities={initialData.activities} />}
       </div>
+
+      {/* Deliverable Upload Modal (Priority 7) */}
+      <AnimatePresence>
+        {showUploadModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm p-4">
+            <div className="fixed inset-0" onClick={() => setShowUploadModal(false)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className="relative z-10 w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 space-y-5"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-gray-950">Upload Deliverable</h3>
+                <button onClick={() => setShowUploadModal(false)} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUploadDeliverable} className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1.5">Deliverable Name *</label>
+                  <input
+                    type="text"
+                    value={uploadName}
+                    onChange={e => setUploadName(e.target.value)}
+                    placeholder="e.g., Homepage Mockup v2"
+                    className="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1.5">Version</label>
+                  <input
+                    type="text"
+                    value={uploadVersion}
+                    onChange={e => setUploadVersion(e.target.value)}
+                    placeholder={`Auto: v${(deliverables.map(d => parseFloat(String(d.version)) || 0).reduce((max, v) => Math.max(max, v), 0) + 1).toFixed(1)}`}
+                    className="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 block mb-1.5">Notes (optional)</label>
+                  <textarea
+                    value={uploadNotes}
+                    onChange={e => setUploadNotes(e.target.value)}
+                    rows={3}
+                    placeholder="Add a note about this deliverable..."
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none"
+                  />
+                </div>
+
+                <div
+                  className={`border-2 border-dashed rounded-xl p-6 text-center hover:border-gray-400 transition-colors cursor-pointer ${uploadFile ? 'border-indigo-300 bg-indigo-50/30' : 'border-gray-200'}`}
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                >
+                  {uploadFile ? (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-2">
+                        <UploadCloud className="w-5 h-5" />
+                      </div>
+                      <p className="text-xs font-semibold text-gray-900 truncate max-w-[200px] mx-auto">{uploadFile.name}</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">{(uploadFile.size / 1024).toFixed(1)} KB</p>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setUploadFile(null); }}
+                        className="mt-2 text-[10px] font-semibold text-red-500 hover:text-red-700 underline"
+                      >
+                        Remove file
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-xs font-semibold text-gray-600">Click to select file or drag & drop</p>
+                      <p className="text-[10px] text-gray-400 mt-1">PDF, PNG, ZIP up to 50MB</p>
+                    </>
+                  )}
+                  <input
+                    id="file-upload"
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.png,.jpg,.jpeg,.zip,.doc,.docx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setUploadFile(file);
+                      // Reset input so re-selecting the same file still triggers onChange
+                      e.target.value = '';
+                    }}
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowUploadModal(false)}
+                    className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-xs font-semibold rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={uploading || !uploadName}
+                    className="flex-1 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                    {uploading ? 'Uploading...' : 'Upload'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

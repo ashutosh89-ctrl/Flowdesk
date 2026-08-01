@@ -10,7 +10,7 @@ export default async function FreelancerInvoicesPage() {
     redirect('/login');
   }
 
-  const allInvoices = await readAll<Invoice>('invoices');
+  const allInvoices = await readAll<Invoice>('invoices', session.id);
   
   const invoices = await Promise.all(
     allInvoices.map(async (i) => {
@@ -23,8 +23,9 @@ export default async function FreelancerInvoicesPage() {
     })
   );
 
-  const projects = await readAll<Project>('projects');
+  const projects = await readAll<Project>('projects', session.id);
   const clients = await readAll<Client>('clients', session.id);
+
 
   return (
     <InvoicesClient 

@@ -380,7 +380,7 @@ export default function ClientWorkspaceContainer() {
                           <div>
                             <span className="font-bold text-gray-800">{act.description}</span>
                             <span className="text-[10px] font-semibold text-gray-400 block mt-0.5">
-                              {new Date(act.createdAt).toLocaleDateString()} at {new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(act.createdAt).toLocaleDateString('en-US')} at {new Date(act.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                         </div>
@@ -497,7 +497,7 @@ export default function ClientWorkspaceContainer() {
                           <div>
                             <h4 className="text-xs font-bold text-gray-900">{doc.name}</h4>
                             <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
-                              {doc.type.toUpperCase()} • {doc.uploadedAt ? `Uploaded ${new Date(doc.uploadedAt).toLocaleDateString()}` : 'Pending upload'}
+                              {doc.type.toUpperCase()} • {doc.uploadedAt ? `Uploaded ${new Date(doc.uploadedAt).toLocaleDateString('en-US')}` : 'Pending upload'}
                             </p>
                           </div>
                         </div>
@@ -656,7 +656,7 @@ export default function ClientWorkspaceContainer() {
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-extrabold text-gray-950">{comm.userName}</span>
                           <span className="text-[10px] font-semibold text-gray-400">
-                            {new Date(comm.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(comm.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                         <p className="text-gray-700 leading-relaxed">{comm.content}</p>

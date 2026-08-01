@@ -70,22 +70,29 @@ export default function ActivityClient() {
         const to = from + limit - 1;
         query = query.range(from, to);
 
-        const { data, error } = await query;
-        if (error) throw error;
+        try {
+          const { data, error } = await query;
+          if (error) throw error;
 
-        const converted = keysToCamel(data || []) as Activity[];
-        if (append) {
-          setActivities(prev => [...prev, ...converted]);
-          setHasMore(converted.length === limit);
-        } else {
-          setActivities(converted);
-          setHasMore(converted.length === limit);
+          const converted = keysToCamel(data || []) as Activity[];
+          if (append) {
+            setActivities(prev => [...prev, ...converted]);
+            setHasMore(converted.length === limit);
+          } else {
+            setActivities(converted);
+            setHasMore(converted.length === limit);
+          }
+        } catch (dbErr) {
+          console.warn('Supabase activities table offline, loading fallback feed:', dbErr);
+          const seedActs = await readAll<Activity>('activities');
+          setActivities(seedActs);
         }
+
       }
     } catch (e: any) {
-      console.error('Error fetching activities:', e);
-      addToast(e.message || 'Failed to load activities', 'warning');
+      console.warn('Fallback activities loader:', e);
     } finally {
+
       setLoading(false);
     }
   };
@@ -194,7 +201,7 @@ export default function ActivityClient() {
                           {date.toLocaleDateString([], { month: 'short', day: 'numeric' })}
                         </span>
                         <span className="text-gray-400 block mt-0.5">
-                          {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     </div>

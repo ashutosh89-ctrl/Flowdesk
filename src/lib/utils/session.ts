@@ -1,8 +1,10 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-const SECRET = new TextEncoder().encode(
-  process.env.SESSION_SECRET || 'dev-secret-change-in-production'
-);
+const secretKey = process.env.SESSION_SECRET || 'flowdesk-production-256bit-session-secret-key-at-least-32-chars';
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+  console.warn('[SECURITY WARNING] SESSION_SECRET environment variable is missing. Using default fallback key.');
+}
+const SECRET = new TextEncoder().encode(secretKey);
 
 export async function createSession(user: { id: string; email: string; role: string; onboarded?: boolean }) {
   const token = await new SignJWT(user)

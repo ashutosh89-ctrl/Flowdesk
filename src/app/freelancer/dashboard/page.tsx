@@ -12,15 +12,16 @@ export default async function FreelancerDashboardPage() {
   }
 
   const clients = await readAll<Client>('clients', session.id);
-  const workspaces = await readAll<ClientWorkspace>('workspaces');
-  const projects = await readAll<Project>('projects');
-  const invoices = await readAll<Invoice>('invoices');
+  const workspaces = await readAll<ClientWorkspace>('workspaces', session.id);
+  const projects = await readAll<Project>('projects', session.id);
+  const invoices = await readAll<Invoice>('invoices', session.id);
   
-  const allActs = await readAll<Activity>('activities');
+  const allActs = await readAll<Activity>('activities', session.id);
   const activities = allActs
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 8);
   const actions = await getNextBestActions(session.id);
+
 
   return (
     <FreelancerDashboardClient 

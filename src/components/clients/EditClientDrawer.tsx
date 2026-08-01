@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../AppContext';
 import { updateClient } from '../../lib/services/clientService';
 import { Client } from '../../lib/types';
-import { X, Sparkles, Loader2 } from 'lucide-react';
+import { X, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface EditClientDrawerProps {
@@ -19,6 +19,8 @@ export default function EditClientDrawer({ client, isOpen, onClose, onSuccess }:
   const [company, setCompany] = useState(client.company);
   const [email, setEmail] = useState(client.email);
   const [phone, setPhone] = useState(client.phone || '');
+  const [status, setStatus] = useState(client.status || 'lead');
+  const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -27,12 +29,27 @@ export default function EditClientDrawer({ client, isOpen, onClose, onSuccess }:
     setCompany(client.company);
     setEmail(client.email);
     setPhone(client.phone || '');
+    setStatus(client.status || 'lead');
   }, [client]);
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const validateEmail = (val: string) => {
+    if (val && !emailRegex.test(val)) {
+      setEmailError('Please enter a valid email address');
+      return false;
+    }
+    setEmailError('');
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !company.trim() || !email.trim()) {
       setError('Please fill in Name, Company, and Email');
+      return;
+    }
+    if (!validateEmail(email)) {
       return;
     }
 
@@ -42,7 +59,8 @@ export default function EditClientDrawer({ client, isOpen, onClose, onSuccess }:
         name,
         company,
         email,
-        phone
+        phone,
+        status
       });
       addToast('Client updated successfully!', 'success');
       onSuccess?.();
@@ -127,14 +145,39 @@ export default function EditClientDrawer({ client, isOpen, onClose, onSuccess }:
                 onChange={(e) => {
                   setEmail(e.target.value);
                   if (error) setError('');
+                  if (emailError) setEmailError('');
                 }}
-                className="peer w-full h-12 px-4 pt-5 pb-1 bg-white/10 border border-black/10 rounded-xl text-gray-900 placeholder-transparent focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900/20 transition-all text-sm"
+                onBlur={() => validateEmail(email)}
+                className={`peer w-full h-12 px-4 pt-5 pb-1 bg-white/10 border ${emailError ? 'border-red-400' : 'border-black/10'} rounded-xl text-gray-900 placeholder-transparent focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900/20 transition-all text-sm`}
                 placeholder=" "
                 required
               />
               <label className="absolute left-4 top-3.5 text-gray-500 text-sm transition-all pointer-events-none peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-950 peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-xs">
                 Email Address
               </label>
+              {emailError && (
+                <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {emailError}
+                </p>
+              )}
+            </div>
+
+            {/* Client Status Selector */}
+            <div className="relative">
+              <label className="text-xs font-semibold text-gray-700 mb-1.5 block">Client Status</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full h-12 px-4 bg-white/10 border border-black/10 rounded-xl text-gray-900 text-sm font-medium focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900/20 transition-all cursor-pointer"
+              >
+                <option value="lead">Lead</option>
+                <option value="onboarding">Onboarding</option>
+                <option value="active">Active</option>
+                <option value="waiting">Waiting</option>
+                <option value="completed">Completed</option>
+                <option value="archived">Archived</option>
+              </select>
             </div>
 
             {/* Phone Input with Floating Label */}
@@ -155,7 +198,9 @@ export default function EditClientDrawer({ client, isOpen, onClose, onSuccess }:
             </div>
 
             {error && (
-              <p className="text-red-650 text-xs font-bold text-center">{error}</p>
+              <p className="text-red-650 text-xs font-bold text-center flex items-center justify-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5" />
+                {error}</p>
             )}
           </form>
         </div>

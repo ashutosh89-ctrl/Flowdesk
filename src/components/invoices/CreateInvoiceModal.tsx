@@ -470,9 +470,27 @@ export default function CreateInvoiceModal({ isOpen, onClose, onSuccess }: Creat
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 bg-gray-950 hover:bg-gray-800 text-white font-bold text-xs rounded-full transition-colors cursor-pointer flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-white border border-gray-950 text-gray-950 hover:bg-gray-50 font-bold text-xs rounded-full transition-colors cursor-pointer flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save as Draft'}
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={async (e) => {
+                await handleSubmit(e);
+                try {
+                  const allInvs = await readAll<any>('invoices');
+                  const created = allInvs.find((i: any) => i.invoiceNumber === invoiceNumber);
+                  if (created?.id) {
+                    const { sendInvoice } = await import('../../lib/services/invoiceService');
+                    await sendInvoice(created.id);
+                  }
+                } catch (e) {}
+              }}
+              className="flex-1 py-3 bg-gray-950 hover:bg-gray-800 text-white font-bold text-xs rounded-full transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-2xs"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save & Send Now'}
             </button>
           </div>
         </form>

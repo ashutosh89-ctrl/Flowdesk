@@ -13,8 +13,9 @@ export default async function FreelancerProjectsPage() {
   const allClients = await readAll<Client>('clients', session.id);
   const clientIds = allClients.map(c => c.id);
   
-  const allProjects = await readAll<Project>('projects');
+  const allProjects = await readAll<Project>('projects', session.id);
   const projects = allProjects.filter(p => clientIds.includes(p.clientId));
+
 
   return (
     <ProjectsClient 

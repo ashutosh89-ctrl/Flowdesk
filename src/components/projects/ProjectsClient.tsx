@@ -5,7 +5,7 @@ import { Project, Client } from '../../lib/types';
 import CreateProjectModal from './CreateProjectModal';
 import ProjectDetail from './ProjectDetail';
 import { 
-  Plus, Search, Grid, List, Calendar, ChevronRight 
+  Plus, Search, Grid, List, Calendar, ChevronRight, X 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -68,14 +68,23 @@ export function ProjectsClient({ initialProjects, initialClients }: ProjectsClie
     <div className="flex-1 flex flex-col font-sans h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 border-b border-black/5 bg-white/30 backdrop-blur-md shrink-0">
         <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <input
             type="text"
             placeholder="Search projects by name or client..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white/50 border border-black/5 rounded-full text-xs font-semibold text-gray-800 focus:outline-none focus:border-gray-900 transition-all placeholder-gray-400"
+            className="w-full pl-10 pr-10 py-2.5 bg-white/50 border border-black/5 rounded-full text-xs font-semibold text-gray-800 focus:outline-none focus:border-gray-900 transition-all placeholder-gray-400"
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -116,7 +125,7 @@ export function ProjectsClient({ initialProjects, initialClients }: ProjectsClie
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProjects.length === 0 ? (
-              <p className="col-span-full py-12 text-center text-xs font-semibold text-gray-455">No projects found.</p>
+              <p className="col-span-full py-12 text-center text-xs font-semibold text-gray-500">No projects found.</p>
             ) : (
               filteredProjects.map((proj, idx) => (
                 <motion.div
@@ -134,9 +143,9 @@ export function ProjectsClient({ initialProjects, initialClients }: ProjectsClie
                       {proj.status.replace('_', ' ')}
                     </span>
                     {proj.dueDate && (
-                      <span className="text-[10px] font-semibold text-gray-400 flex items-center gap-1">
+                      <span className="text-[10px] font-semibold text-gray-500 flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5" />
-                        {new Date(proj.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                        {new Date(proj.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </span>
                     )}
                   </div>
@@ -181,8 +190,8 @@ export function ProjectsClient({ initialProjects, initialClients }: ProjectsClie
         ) : (
           <div className="bg-white rounded-2xl border border-black/5 overflow-hidden shadow-sm">
             <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-black/5 bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              <thead className="sticky top-0 z-10 bg-gray-50">
+                <tr className="border-b border-black/5 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                   <th className="px-6 py-4">Project Name</th>
                   <th className="px-6 py-4">Client</th>
                   <th className="px-6 py-4">Due Date</th>
@@ -194,7 +203,7 @@ export function ProjectsClient({ initialProjects, initialClients }: ProjectsClie
               <tbody className="divide-y divide-gray-150/40">
                 {filteredProjects.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-xs font-semibold text-gray-400">
+                    <td colSpan={6} className="px-6 py-12 text-center text-xs font-semibold text-gray-500">
                       No projects found.
                     </td>
                   </tr>
@@ -212,7 +221,7 @@ export function ProjectsClient({ initialProjects, initialClients }: ProjectsClie
                         {getClientName(proj.clientId)}
                       </td>
                       <td className="px-6 py-4.5 text-xs font-semibold text-gray-400">
-                        {proj.dueDate ? new Date(proj.dueDate).toLocaleDateString() : '—'}
+                        {proj.dueDate ? new Date(proj.dueDate).toLocaleDateString('en-US') : '—'}
                       </td>
                       <td className="px-6 py-4.5">
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${getStatusColor(proj.status)}`}>

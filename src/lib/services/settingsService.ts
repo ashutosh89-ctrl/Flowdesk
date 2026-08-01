@@ -2,7 +2,6 @@ import {
   UserProfile, BusinessSettings, NotificationSettings, 
   BillingSettings, WorkspacePreferences, SecuritySettings 
 } from '../types';
-import { read, readAll, create, update } from './dataService';
 
 export interface FullUserSettings {
   profile: UserProfile;
@@ -40,7 +39,13 @@ export const DEFAULT_BUSINESS_SETTINGS: BusinessSettings = {
   invoicePrefix: 'INV-',
   defaultDueDateDays: 14 as any,
   defaultReminderSchedule: '3_days_before',
-  emailSignature: 'Thanks,\nAlex Chen\nPrincipal Architect, FlowDesk Studio'
+  emailSignature: 'Thanks,\nAlex Chen\nPrincipal Architect, FlowDesk Studio',
+  bankName: 'First National Bank',
+  accountNumber: '123456789012',
+  bankCode: 'FNBIUS33',
+  branch: 'San Francisco Main Branch',
+  upiId: 'flowdesk@upi',
+  termsAndConditions: '1. Payment is due by the date specified above.\n2. Please mention Invoice Number on all payment transfers.\n3. Late payments may incur additional charges.'
 };
 
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
@@ -109,12 +114,8 @@ export const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
   twoFactorEnabled: false
 };
 
-export async function getFullSettings(): Promise<FullUserSettings> {
-  try {
-    const stored = localStorage.getItem('flowdesk_full_settings');
-    if (stored) return JSON.parse(stored);
-  } catch (e) {}
-
+// Default/fallback settings for first-time users
+function getDefaults(): FullUserSettings {
   return {
     profile: DEFAULT_USER_PROFILE,
     business: DEFAULT_BUSINESS_SETTINGS,
@@ -125,10 +126,67 @@ export async function getFullSettings(): Promise<FullUserSettings> {
   };
 }
 
-export async function saveFullSettings(settings: FullUserSettings): Promise<FullUserSettings> {
+// Load settings from localStorage cache
+function loadFromCache(): FullUserSettings | null {
+  try {
+    const stored = localStorage.getItem('flowdesk_full_settings');
+    if (stored) return JSON.parse(stored);
+  } catch (e) {}
+  return null;
+}
+
+// Save settings to localStorage cache
+function saveToCache(settings: FullUserSettings): void {
   try {
     localStorage.setItem('flowdesk_full_settings', JSON.stringify(settings));
   } catch (e) {}
+}
+
+export async function getFullSettings(): Promise<FullUserSettings> {
+  // Try API first (source of truth)
+  try {
+    const res = await fetch('/api/settings');
+    if (res.ok) {
+      const data = await res.json();
+      // If API returns settings, use them and cache locally
+      if (data.settings) {
+        saveToCache(data.settings);
+        return data.settings;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to fetch settings from API, using local cache:', e);
+  }
+
+  // Fallback: try localStorage cache
+  const cached = loadFromCache();
+  if (cached) return cached;
+
+  // Last resort: return defaults
+  return getDefaults();
+}
+
+export async function saveFullSettings(settings: FullUserSettings): Promise<FullUserSettings> {
+  // Save to API (source of truth)
+  let apiSuccess = false;
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    });
+    apiSuccess = res.ok;
+  } catch (e) {
+    console.warn('Failed to save settings to API:', e);
+  }
+
+  // Always save to localStorage as cache/fallback
+  saveToCache(settings);
+
+  if (!apiSuccess) {
+    console.warn('Settings saved locally only (API unavailable)');
+  }
+
   return settings;
 }
 

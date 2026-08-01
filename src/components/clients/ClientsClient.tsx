@@ -29,6 +29,8 @@ export function ClientsClient({ initialClients, initialInvitations }: ClientsCli
   const [invitations, setInvitations] = useState<Invitation[]>(initialInvitations);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'active' | 'archived'>('active');
+  const [createStatus, setCreateStatus] = useState('lead');
+  const [createEmailError, setCreateEmailError] = useState('');
   
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [invitingClient, setInvitingClient] = useState<Client | null>(null);
@@ -71,7 +73,13 @@ export function ClientsClient({ initialClients, initialInvitations }: ClientsCli
       return;
     }
 
-    setLoading(false);
+    // Email validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setCreateEmailError('Please enter a valid email address');
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await createClient({
         userId: user?.id || 'usr_ann',
@@ -79,6 +87,7 @@ export function ClientsClient({ initialClients, initialInvitations }: ClientsCli
         company,
         email,
         phone,
+        status: createStatus,
       });
 
       addToast(`Client ${res.name} created!`, 'success');
@@ -167,17 +176,25 @@ export function ClientsClient({ initialClients, initialInvitations }: ClientsCli
 
   return (
     <div className="flex-1 flex flex-col font-sans h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 border-b border-black/5 bg-white/30 backdrop-blur-md shrink-0">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search clients by name, company, or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white/50 border border-black/5 rounded-full text-xs font-semibold text-gray-800 focus:outline-none focus:border-gray-900 transition-all placeholder-gray-400"
-          />
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 border-b border-black/5 bg-white/30 backdrop-blur-md shrink-0">          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search clients by name, company, or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-10 py-2.5 bg-white/50 border border-black/5 rounded-full text-xs font-semibold text-gray-800 focus:outline-none focus:border-gray-900 transition-all placeholder-gray-400"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
         <div className="flex items-center gap-3">
           <div className="flex bg-white border border-black/10 rounded-full p-1 shadow-sm">
@@ -216,8 +233,8 @@ export function ClientsClient({ initialClients, initialInvitations }: ClientsCli
       <div className="flex-1 overflow-auto p-6">
         <div className="bg-white rounded-2xl border border-black/5 overflow-hidden shadow-sm">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-black/5 bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+            <thead className="sticky top-0 z-10 bg-gray-50">
+              <tr className="border-b border-black/5 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                 <th className="px-6 py-4">Client / Company</th>
                 <th className="px-6 py-4">Contact Email</th>
                 <th className="px-6 py-4">Portal Status</th>
@@ -228,7 +245,7 @@ export function ClientsClient({ initialClients, initialInvitations }: ClientsCli
             <tbody className="divide-y divide-gray-100/50">
               {filteredClients.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-xs font-semibold text-gray-400">
+                  <td colSpan={5} className="px-6 py-12 text-center text-xs font-semibold text-gray-500">
                     No clients found.
                   </td>
                 </tr>
@@ -252,7 +269,7 @@ export function ClientsClient({ initialClients, initialInvitations }: ClientsCli
                           <h4 className="text-sm font-bold text-gray-900 group-hover:text-black leading-tight truncate">
                             {client.name}
                           </h4>
-                          <span className="text-[10px] font-bold text-gray-400 block mt-0.5 truncate">
+                          <span className="text-[10px] font-bold text-gray-500 block mt-0.5 truncate">
                             {client.company}
                           </span>
                         </div>
@@ -395,7 +412,7 @@ export function ClientsClient({ initialClients, initialInvitations }: ClientsCli
             >
               <div className="h-16 px-6 border-b border-black/5 bg-white flex items-center justify-between shrink-0">
                 <h3 className="text-sm font-bold text-gray-950 uppercase tracking-wide">Add New Client</h3>
-                <button onClick={() => setCreateClientOpen(false)} className="p-1.5 hover:bg-black/5 rounded-full text-gray-400 transition-colors">
+                <button                onClick={() => setCreateClientOpen(false)} className="p-1.5 hover:bg-black/5 rounded-full text-gray-500 transition-colors" aria-label="Close create client drawer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -445,7 +462,15 @@ export function ClientsClient({ initialClients, initialInvitations }: ClientsCli
                       <input
                         type="email"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (createEmailError) setCreateEmailError('');
+                        }}
+                        onBlur={() => {
+                          if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                            setCreateEmailError('Please enter a valid email address');
+                          }
+                        }}
                         className="peer w-full h-12 px-4 pt-5 pb-1 bg-white border border-black/10 rounded-xl text-gray-900 placeholder-transparent focus:outline-none focus:border-gray-900 transition-all text-xs font-semibold"
                         placeholder=" "
                         required
@@ -453,6 +478,29 @@ export function ClientsClient({ initialClients, initialInvitations }: ClientsCli
                       <label className="absolute left-4 top-3.5 text-gray-400 text-xs transition-all pointer-events-none peer-focus:top-1 peer-focus:text-[10px] peer-focus:text-gray-950 peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[10px]">
                         Email Address
                       </label>
+                      {createEmailError && (
+                        <p className="text-red-600 text-xs mt-1 flex items-center gap-1 font-medium">
+                          <AlertCircle className="w-3 h-3" />
+                          {createEmailError}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Client Status Selector */}
+                    <div className="relative">
+                      <label className="text-xs font-semibold text-gray-700 mb-1.5 block">Client Status</label>
+                      <select
+                        value={createStatus}
+                        onChange={(e) => setCreateStatus(e.target.value)}
+                        className="w-full h-12 px-4 bg-white border border-black/10 rounded-xl text-gray-900 text-sm font-medium focus:outline-none focus:border-gray-900 transition-all cursor-pointer"
+                      >
+                        <option value="lead">Lead</option>
+                        <option value="onboarding">Onboarding</option>
+                        <option value="active">Active</option>
+                        <option value="waiting">Waiting</option>
+                        <option value="completed">Completed</option>
+                        <option value="archived">Archived</option>
+                      </select>
                     </div>
 
                     <div className="relative">

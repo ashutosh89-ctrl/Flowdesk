@@ -18,7 +18,7 @@ export default function MobileBottomNav() {
 
   const moreItems = [
     { label: 'Documents', icon: FileText, href: '/freelancer/clients' },
-    { label: 'Activity Feed', icon: Activity, href: '/freelancer/dashboard' },
+    { label: 'Activity Feed', icon: Activity, href: '/freelancer/activity' },
     { label: 'Settings', icon: Settings, href: '/freelancer/settings' },
   ];
 

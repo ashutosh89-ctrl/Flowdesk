@@ -9,6 +9,7 @@ export interface CreateClientInput {
   email: string;
   phone?: string;
   avatar?: string;
+  status?: string;
 }
 
 export async function createClient(data: CreateClientInput): Promise<Client & { workspaceId?: string }> {
@@ -19,7 +20,7 @@ export async function createClient(data: CreateClientInput): Promise<Client & { 
     company: data.company,
     email: data.email,
     phone: data.phone,
-    status: 'active',
+    status: data.status || 'active',
     avatar: data.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(data.name)}`,
     createdAt: new Date().toISOString()
   };

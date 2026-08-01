@@ -248,7 +248,7 @@ export default function DashboardScreen() {
                     <div>
                       <p className="text-xs font-bold text-gray-800 leading-relaxed">{act.description}</p>
                       <span className="text-[10px] font-semibold text-gray-400 block mt-1">
-                        {new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(act.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                   </div>

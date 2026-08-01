@@ -354,7 +354,7 @@ export default function ClientPortalScreen() {
                             <div className="flex items-center gap-1.5 mb-1 text-[10px]">
                               <span className="font-extrabold text-gray-950">{comm.userName}</span>
                               <span className="text-gray-400">
-                                {new Date(comm.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(comm.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
                             <p className="text-gray-700 font-semibold">{comm.content}</p>
@@ -389,7 +389,7 @@ export default function ClientPortalScreen() {
                         <div className="flex justify-between items-start">
                           <div>
                             <h4 className="text-xs font-bold text-gray-900">{invoice.invoiceNumber}</h4>
-                            <p className="text-[10px] text-gray-400 font-semibold mt-0.5">Due: {new Date(invoice.dueDate).toLocaleDateString()}</p>
+                            <p className="text-[10px] text-gray-400 font-semibold mt-0.5">Due: {new Date(invoice.dueDate).toLocaleDateString('en-US')}</p>
                           </div>
 
                           <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase ${

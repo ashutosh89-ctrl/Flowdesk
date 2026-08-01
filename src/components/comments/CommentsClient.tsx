@@ -81,7 +81,7 @@ export default function CommentsClient() {
           comments.map((comm) => (
             <div key={comm.id} className="flex gap-3 text-xs leading-normal">
               <img
-                src={comm.userAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(comm.userName)}`}
+                src={comm.userAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(comm.userName || 'User')}`}
                 alt="Avatar"
                 className="w-8 h-8 rounded-full border border-black/5 object-cover shrink-0"
               />
@@ -89,7 +89,7 @@ export default function CommentsClient() {
                 <div className="flex items-center gap-1.5 mb-1">
                   <span className="font-bold text-gray-950">{comm.userName}</span>
                   <span className="text-[9px] text-gray-400 font-bold uppercase">
-                    {new Date(comm.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(comm.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
                 <p className="text-gray-700 font-medium leading-relaxed">{comm.content}</p>

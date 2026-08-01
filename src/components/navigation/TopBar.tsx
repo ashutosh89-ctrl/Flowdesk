@@ -3,10 +3,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useApp } from '../AppContext';
-import { Bell, Plus, User, CreditCard, LogOut, ChevronDown, Users, FolderOpen, Receipt, X } from 'lucide-react';
+import { Bell, Plus, User, CreditCard, LogOut, ChevronDown, Users, FolderOpen, Receipt, X, Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import Breadcrumbs from '@/components/ui/Breadcrumbs';
+import { QuickActionsMenu } from '../dashboard/QuickActionsMenu';
+import { CommandPalette } from '@/components/search/CommandPalette';
 
-export default function TopBar() {
+interface TopBarProps {
+  onMenuToggle?: () => void;
+  clients?: import('@/lib/types').Client[];
+}
+
+export default function TopBar({ onMenuToggle, clients }: TopBarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { 
@@ -18,11 +26,22 @@ export default function TopBar() {
   const [showQuickCreate, setShowQuickCreate] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [hasNotifications, setHasNotifications] = useState(true);
+  const [notificationsList, setNotificationsList] = useState<import('@/lib/services/notificationService').AppNotification[]>([]);
 
   const plusRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const loadNotifs = async () => {
+      try {
+        const { getNotifications } = await import('@/lib/services/notificationService');
+        const list = await getNotifications();
+        setNotificationsList(list);
+      } catch (e) {}
+    };
+    loadNotifs();
+  }, []);
 
   // Click outside handling
   useEffect(() => {
@@ -98,39 +117,56 @@ export default function TopBar() {
   };
 
   return (
-    <header className="h-16 border-b border-black/5 bg-white/40 backdrop-blur-md px-6 flex items-center justify-between relative z-25 shrink-0 select-none">
-      {/* Left side: Dynamic Page Title */}
-      <div className="flex items-center gap-3">
-        <AnimatePresence mode="wait">
-          <motion.h1
-            key={title}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="text-2xl font-bold text-gray-950 font-sans tracking-tight"
-          >
-            {title}
-          </motion.h1>
-        </AnimatePresence>
+    <header className="h-16 border-b border-black/5 bg-white/40 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between relative z-25 shrink-0 select-none">
+      {/* Left side: Hamburger + Breadcrumbs + Page Title */}
+      <div className="flex items-center gap-3 min-w-0">
+        {/* Hamburger Menu (Mobile) */}
+        <button
+          onClick={onMenuToggle}
+          className="md:hidden p-2 rounded-xl hover:bg-black/5 text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
+          aria-label="Open navigation menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <div className="flex flex-col min-w-0">
+          <Breadcrumbs clients={clients} />
+          <AnimatePresence mode="wait">
+            <motion.h1
+              key={title}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="text-xl sm:text-2xl font-bold text-gray-950 font-sans tracking-tight truncate"
+            >
+              {title}
+            </motion.h1>
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Right side: Actions & Profile */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
+        {/* Global Command Palette (⌘K) */}
+        <CommandPalette />
+
         {/* Notification Bell Dropdown */}
         <div ref={bellRef} className="relative">
           <button 
             onClick={() => {
               setShowNotifications(!showNotifications);
-              setHasNotifications(false);
               setShowQuickCreate(false);
               setShowProfileMenu(false);
             }}
             className="relative p-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-black/5 transition-all focus:outline-none cursor-pointer"
+            aria-label="Notifications"
           >
             <Bell className="w-5 h-5" />
-            {hasNotifications && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+            {notificationsList.filter(n => !n.read).length > 0 && (
+              <span className="absolute top-1 right-1 px-1.5 py-0.2 text-[9px] font-black bg-red-600 text-white rounded-full min-w-[16px] text-center shadow-xs">
+                {notificationsList.filter(n => !n.read).length}
+              </span>
             )}
           </button>
 
@@ -141,17 +177,67 @@ export default function TopBar() {
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                className="absolute right-0 mt-2 w-80 bg-white border border-black/5 rounded-2xl shadow-xl overflow-hidden z-30"
+                className="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-black/10 rounded-2xl shadow-2xl overflow-hidden z-30 font-sans"
               >
-                <div className="flex items-center justify-between border-b border-black/5 px-4 py-3">
-                  <span className="text-xs font-bold text-gray-950">Notifications</span>
-                  <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-gray-900">
-                    <X className="w-4 h-4" />
-                  </button>
+                <div className="flex items-center justify-between border-b border-black/5 px-4 py-3 bg-gray-50/50">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-extrabold text-gray-950">Notifications</span>
+                    {notificationsList.filter(n => !n.read).length > 0 && (
+                      <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                        {notificationsList.filter(n => !n.read).length} Unread
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {notificationsList.some(n => !n.read) && (
+                      <button
+                        onClick={async () => {
+                          const { markAllNotificationsAsRead } = await import('@/lib/services/notificationService');
+                          const updated = await markAllNotificationsAsRead();
+                          setNotificationsList(updated);
+                        }}
+                        className="text-[10px] font-bold text-gray-500 hover:text-gray-950 cursor-pointer underline"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                    <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-gray-900 cursor-pointer">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="p-6 text-center">
-                  <p className="text-xs font-semibold text-gray-700">No new notifications</p>
-                  <p className="text-[10px] text-gray-400 mt-1">Activity alerts will appear here when updates occur.</p>
+
+                <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                  {notificationsList.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <Bell className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-xs font-bold text-gray-700">No new notifications</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">Activity alerts will appear here when updates occur.</p>
+                    </div>
+                  ) : (
+                    notificationsList.map((notif) => (
+                      <div
+                        key={notif.id}
+                        onClick={async () => {
+                          const { markNotificationAsRead } = await import('@/lib/services/notificationService');
+                          const updated = await markNotificationAsRead(notif.id);
+                          setNotificationsList(updated);
+                          setShowNotifications(false);
+                          if (notif.link) router.push(notif.link);
+                        }}
+                        className={`p-3.5 flex items-start gap-3 hover:bg-gray-50 transition-colors cursor-pointer ${!notif.read ? 'bg-amber-50/30' : ''}`}
+                      >
+                        <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!notif.read ? 'bg-red-500' : 'bg-transparent'}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-gray-950 leading-tight">{notif.title}</p>
+                          <p className="text-[11px] font-medium text-gray-550 leading-snug mt-0.5 line-clamp-2">{notif.message}</p>
+                          <span className="text-[9px] font-bold text-gray-400 mt-1 block">
+                            {new Date(notif.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </motion.div>
             )}
@@ -167,6 +253,7 @@ export default function TopBar() {
                 setShowNotifications(false);
                 setShowProfileMenu(false);
               }}
+              aria-label="Quick Actions Menu"
               className="w-10 h-10 rounded-full bg-gray-950 flex items-center justify-center text-white hover:bg-gray-800 transition-colors shadow-sm focus:outline-none cursor-pointer"
             >
               <Plus className="w-5 h-5" />
@@ -174,50 +261,9 @@ export default function TopBar() {
 
             <AnimatePresence>
               {showQuickCreate && (
-                <motion.div
-                  variants={dropdownVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  className="absolute right-0 mt-2 w-48 bg-white border border-black/5 rounded-2xl shadow-xl p-2 z-30"
-                >
-                  <motion.button
-                    variants={itemVariants}
-                    onClick={() => {
-                      router.push('/freelancer/clients');
-                      setCreateClientOpen(true);
-                      setShowQuickCreate(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors cursor-pointer flex items-center gap-2"
-                  >
-                    <Users className="w-4 h-4 text-gray-400" />
-                    New Client
-                  </motion.button>
-                  <motion.button
-                    variants={itemVariants}
-                    onClick={() => {
-                      router.push('/freelancer/projects');
-                      setCreateProjectOpen(true);
-                      setShowQuickCreate(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors cursor-pointer flex items-center gap-2"
-                  >
-                    <FolderOpen className="w-4 h-4 text-gray-400" />
-                    New Project
-                  </motion.button>
-                  <motion.button
-                    variants={itemVariants}
-                    onClick={() => {
-                      router.push('/freelancer/invoices');
-                      setCreateInvoiceOpen(true);
-                      setShowQuickCreate(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-gray-900 rounded-xl transition-colors cursor-pointer flex items-center gap-2"
-                  >
-                    <Receipt className="w-4 h-4 text-gray-400" />
-                    Create Invoice
-                  </motion.button>
-                </motion.div>
+                <div className="absolute right-0 mt-2 z-30">
+                  <QuickActionsMenu onClose={() => setShowQuickCreate(false)} />
+                </div>
               )}
             </AnimatePresence>
           </div>

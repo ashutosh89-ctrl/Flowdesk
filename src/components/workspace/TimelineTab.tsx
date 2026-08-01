@@ -55,7 +55,7 @@ export function TimelineTab({ workspaceId, activities }: { workspaceId?: string;
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-black/5 hover:shadow-md transition-shadow text-xs">
             <p className="font-bold text-gray-900 leading-normal">{event.description}</p>
             <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
-              {new Date(event.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}{' • '}{new Date(event.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {new Date(event.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{' • '}{new Date(event.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>
         </div>

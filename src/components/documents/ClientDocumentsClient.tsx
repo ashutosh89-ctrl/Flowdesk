@@ -3,7 +3,9 @@ import React, { useState } from 'react';
 import { useApp } from '../AppContext';
 import { uploadDocument } from '../../lib/services/documentService';
 import { Client, Document, ClientWorkspace } from '../../lib/types';
-import { FileText, UploadCloud, X, Loader2 } from 'lucide-react';
+import { FileText, UploadCloud, X, Loader2, Eye, Download } from 'lucide-react';
+import { FilePreviewModal } from '@/components/shared/FilePreviewModal';
+import { handleFileDownload } from '@/lib/utils/fileUtils';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ClientDocumentsClientProps {
@@ -25,6 +27,11 @@ export function ClientDocumentsClient({ initialData }: ClientDocumentsClientProp
   const [uploadName, setUploadName] = useState('');
   const [uploadType, setUploadType] = useState<'pdf' | 'png' | 'docx'>('pdf');
   const [loading, setLoading] = useState(false);
+  const [previewItem, setPreviewItem] = useState<Document | null>(null);
+
+  const handleDownload = (fileUrl: string | undefined, fileName: string) => {
+    handleFileDownload(fileUrl, fileName);
+  };
 
   const loadData = async () => {
     try {
@@ -112,23 +119,36 @@ export function ClientDocumentsClient({ initialData }: ClientDocumentsClientProp
               documents.map((doc) => (
                 <tr key={doc.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4 text-sm font-bold text-gray-950 flex items-center gap-2">
-                    <FileText className="w-4.5 h-4.5 text-gray-400" />
+                    <FileText className="w-4.5 h-4.5 text-gray-400 shrink-0" />
                     {doc.name}
                   </td>
                   <td className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">
                     {doc.type}
                   </td>
                   <td className="px-6 py-4 text-xs font-semibold text-gray-500">
-                    {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'Pending'}
+                    {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('en-US') : 'Pending'}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
-                      doc.status === 'verified' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                      doc.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                      'bg-blue-50 text-blue-700 border-blue-100'
-                    }`}>
-                      {doc.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {/* Preview & Download buttons (Priority 6) */}
+                      {doc.fileUrl && doc.fileUrl !== '#' && (
+                        <div className="flex gap-1 mr-2">
+                          <button onClick={() => setPreviewItem(doc)} className="p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Preview">
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDownload(doc.fileUrl, doc.name)} className="p-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Download">
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
+                        doc.status === 'verified' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                        doc.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                        'bg-blue-50 text-blue-700 border-blue-100'
+                      }`}>
+                        {doc.status}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -205,6 +225,15 @@ export function ClientDocumentsClient({ initialData }: ClientDocumentsClientProp
           </div>
         )}
       </AnimatePresence>
+
+      {/* File Preview Modal (Priority 6) */}
+      <FilePreviewModal
+        isOpen={!!previewItem}
+        onClose={() => setPreviewItem(null)}
+        fileUrl={previewItem?.fileUrl}
+        fileName={previewItem?.name || 'Document'}
+        fileType={previewItem?.fileType}
+      />
     </div>
   );
 }

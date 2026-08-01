@@ -142,7 +142,7 @@ export default function InvoiceDetailScreen() {
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">TAX INVOICE</span>
                 <h1 className="text-2xl font-extrabold text-gray-900 mt-1">{invoice.invoiceNumber}</h1>
-                <p className="text-xs text-gray-500 font-semibold mt-1">Date: {new Date(invoice.createdAt).toLocaleDateString()}</p>
+                <p className="text-xs text-gray-500 font-semibold mt-1">Date: {new Date(invoice.createdAt).toLocaleDateString('en-US')}</p>
               </div>
 
               <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border ${

@@ -1,23 +1,16 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { jwtVerify } from 'jose';
+import { verifySession } from '@/lib/utils/session';
 import { readAll } from '@/lib/services/dataService';
 import { FreelancerWorkspaceClient } from '@/components/workspace/FreelancerWorkspaceClient';
 import { Client, ClientWorkspace, Project, Document as AppDocument, Deliverable, Invoice, Activity, Comment as AppComment } from '@/lib/types';
-
-const SECRET = new TextEncoder().encode(process.env.SESSION_SECRET || 'dev-secret-change-in-production');
 
 export default async function WorkspacePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const sessionCookie = (await cookies()).get('session')?.value;
   
-  if (!sessionCookie) redirect('/login');
-  
-  try {
-    await jwtVerify(sessionCookie, SECRET, { clockTolerance: 60 });
-  } catch {
-    redirect('/login');
-  }
+  const user = sessionCookie ? await verifySession(sessionCookie) : null;
+  if (!user) redirect('/login');
 
   const workspaces = await readAll<ClientWorkspace>('workspaces');
   const workspace = workspaces.find(w => w.id === id) || workspaces[0];
