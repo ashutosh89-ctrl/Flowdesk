@@ -7,13 +7,15 @@ interface WorkspacePreviewStepProps {
   clientCompany: string;
   onFinish: () => void;
   onBack: () => void;
+  submitting?: boolean;
 }
 
 export default function WorkspacePreviewStep({
   clientName,
   clientCompany,
   onFinish,
-  onBack
+  onBack,
+  submitting = false
 }: WorkspacePreviewStepProps) {
   return (
     <div className="space-y-6">
@@ -74,16 +76,25 @@ export default function WorkspacePreviewStep({
         <button
           type="button"
           onClick={onBack}
-          className="flex-1 bg-white border border-black/10 hover:bg-gray-50 text-gray-800 rounded-full h-12 font-medium transition-colors cursor-pointer"
+          disabled={submitting}
+          className="flex-1 bg-white border border-black/10 hover:bg-gray-50 text-gray-800 rounded-full h-12 font-medium transition-colors cursor-pointer disabled:opacity-50"
         >
           Back
         </button>
         <button
           type="button"
           onClick={onFinish}
-          className="flex-1 bg-gray-900 hover:bg-gray-800 text-white rounded-full h-12 font-medium transition-colors cursor-pointer"
+          disabled={submitting}
+          className="flex-1 bg-gray-900 hover:bg-gray-800 text-white rounded-full h-12 font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          Get Started
+          {submitting ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Setting up...</span>
+            </>
+          ) : (
+            'Get Started'
+          )}
         </button>
       </div>
     </div>

@@ -12,22 +12,29 @@ export default function OnboardingClient() {
   const [step, setStep] = useState(1);
 
   const handleComplete = async (profileData: any) => {
-    if (!user) return;
-
     try {
       const supabase = createClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        addToast('Not authenticated. Redirecting to login...', 'warning');
+        router.push('/login');
+        return;
+      }
 
-      // Mark user as onboarded in the profiles table (upsert so the row always
-      // exists even if the email-verification callback never fired)
+      const userRole = authUser.user_metadata?.role || user?.role || 'freelancer';
+      const userName = profileData?.name || user?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User';
+      const userAvatar = profileData?.avatar || user?.avatar || null;
+
+      // Mark user as onboarded in the profiles table
       const { data: updated, error } = await supabase
         .from('profiles')
         .upsert({
-          id: user.id,
-          email: user.email,
-          name: profileData?.name || user.name,
-          avatar_url: profileData?.avatar || user.avatar || null,
-          role: user.role,
-          plan: user.plan,
+          id: authUser.id,
+          email: authUser.email,
+          name: userName,
+          avatar_url: userAvatar,
+          role: userRole,
+          plan: 'free',
           onboarding_completed: true,
         })
         .select()
@@ -35,23 +42,35 @@ export default function OnboardingClient() {
 
       if (error) throw error;
 
-      if (updated) {
-        setUser({
-          ...user,
-          name: updated.name ?? user.name,
-          avatar: updated.avatar_url ?? user.avatar,
-          onboarded: true,
-        });
-      } else {
-        setUser({ ...user, onboarded: true });
-      }
+      // Create default settings rows if missing
+      await supabase.from('business_settings').upsert({ user_id: authUser.id });
+      await supabase.from('notification_settings').upsert({ user_id: authUser.id });
+      await supabase.from('workspace_preferences').upsert({ user_id: authUser.id });
+      await supabase.from('subscriptions').upsert({ user_id: authUser.id, plan: 'free', status: 'active' });
+
+      setUser({
+        id: authUser.id,
+        email: authUser.email || '',
+        name: updated?.name ?? userName,
+        avatar: updated?.avatar_url ?? userAvatar,
+        role: userRole as 'freelancer' | 'client',
+        plan: 'free',
+        onboarded: true,
+        createdAt: new Date().toISOString(),
+      });
 
       addToast('Onboarding completed! Welcome to FlowDesk.', 'success');
 
-      router.push(user.role === 'freelancer' ? '/freelancer/dashboard' : '/client/workspace');
-      router.refresh();
-    } catch (e) {
-      addToast('Failed to save profile configurations', 'warning');
+      const redirectPath = userRole === 'client' ? '/client/workspace' : '/freelancer/dashboard';
+      router.push(redirectPath);
+      setTimeout(() => {
+        if (window.location.pathname.includes('/onboarding')) {
+          window.location.href = redirectPath;
+        }
+      }, 400);
+    } catch (e: any) {
+      console.error('Onboarding completion error:', e);
+      addToast(e.message || 'Failed to save profile configurations', 'warning');
     }
   };
 

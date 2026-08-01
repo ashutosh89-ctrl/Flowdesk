@@ -96,15 +96,21 @@ export default function OnboardingWizard({ step: controlledStep, onStepChange, o
     render();
   };
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleFinish = async () => {
-    if (!user) return;
+    if (submitting) return;
+    setSubmitting(true);
     try {
       const supabase = createClient();
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) throw new Error('Not authenticated');
+      if (!authUser) {
+        addToast('Session expired. Please sign in again.', 'warning');
+        return;
+      }
 
       // 1. Upload avatar (data URL → blob) to the avatars bucket if provided
-      let avatarUrl = profileAvatar || user.avatar || '';
+      let avatarUrl = profileAvatar || user?.avatar || '';
       if (profileAvatar && profileAvatar.startsWith('data:')) {
         try {
           const blob = dataUrlToBlob(profileAvatar);
@@ -119,25 +125,31 @@ export default function OnboardingWizard({ step: controlledStep, onStepChange, o
       }
 
       // 2. Create First Client & Workspace (clientService persists to Supabase)
-      await createAppClient({
-        userId: user.id,
-        name: clientName,
-        company: clientCompany,
-        email: clientEmail,
-        phone: clientPhone,
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(clientName)}`
-      });
+      try {
+        await createAppClient({
+          userId: authUser.id,
+          name: clientName,
+          company: clientCompany,
+          email: clientEmail,
+          phone: clientPhone,
+          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(clientName)}`
+        });
+      } catch (clientErr) {
+        console.warn('Initial client creation notice:', clientErr);
+      }
 
       // Celebrate
       triggerConfetti();
-      addToast('Onboarding completed! Welcome to FlowDesk.', 'success');
 
       // Call the completion handler (updates profile + redirects appropriately)
       if (onComplete) {
-        onComplete({ name: profileName, avatar: avatarUrl });
+        await onComplete({ name: profileName || authUser.user_metadata?.full_name || authUser.email, avatar: avatarUrl });
       }
-    } catch (e) {
-      addToast('Failed to save profile configurations', 'warning');
+    } catch (e: any) {
+      console.error('Onboarding finish error:', e);
+      addToast(e.message || 'Failed to save profile configurations', 'warning');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -188,6 +200,7 @@ export default function OnboardingWizard({ step: controlledStep, onStepChange, o
             clientCompany={clientCompany}
             onFinish={handleFinish}
             onBack={() => setStep(2)}
+            submitting={submitting}
           />
         )}
       </div>
