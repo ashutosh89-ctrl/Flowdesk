@@ -1,7 +1,7 @@
 import { Deliverable, Project } from '../types';
 import { create, read, readAll, update, isPlaceholder } from './dataService';
 import { logActivity } from './activityService';
-import { supabase } from '../supabase/client';
+import { getDataClient } from '../supabase/data';
 
 export interface CreateDeliverableInput {
   projectId: string;
@@ -15,6 +15,7 @@ export async function uploadDeliverableToStorage(file: File, path: string): Prom
   if (isPlaceholder) {
     return '#';
   }
+  const supabase = getDataClient();
   const { data, error } = await supabase.storage
     .from('deliverables')
     .upload(path, file, {

@@ -2,23 +2,26 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useApp } from '../AppContext';
-import { signUp } from '../../lib/services/authService';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { createClient, signInWithOAuth } from '../../lib/supabase/client';
+import { Eye, EyeOff, Loader2, MailCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { validatePassword, validateEmail } from '@/lib/utils/validation';
 
 export default function SignupFormClient() {
   const router = useRouter();
-  const { setUser, addToast } = useApp();
+  const { addToast } = useApp();
+  const supabase = createClient();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [shaking, setShaking] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string }>({});
+  const [checkEmail, setCheckEmail] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string; terms?: string }>({});
   const [strength, setStrength] = useState(0);
 
   // Compute password strength
@@ -66,6 +69,10 @@ export default function SignupFormClient() {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
+    if (!acceptTerms) {
+      newErrors.terms = 'Please accept the terms to continue';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -79,18 +86,44 @@ export default function SignupFormClient() {
 
     setLoading(true);
     try {
-      const result = await signUp(email, password, name);
-      setUser(result.user);
-      addToast('Account created successfully! Redirecting...', 'success');
-      
-      const targetUrl = result.user.onboarded ? (result.user.role === 'client' ? '/client/workspace' : '/freelancer/dashboard') : '/onboarding';
-      router.push(targetUrl);
-      setTimeout(() => {
-        if (window.location.pathname.includes('/signup')) {
-          window.location.href = targetUrl;
-        }
-      }, 500);
+      const { data, error } = await supabase.auth.signUp({
+        email: email.toLowerCase().trim(),
+        password,
+        options: {
+          data: {
+            full_name: name.trim(),
+            role: 'freelancer',
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
+      if (error) throw error;
+
+      // If a session was returned (email confirmation disabled), the callback
+      // route that creates the profile never fires — create it right away so
+      // onboarding + middleware work.
+      if (data?.session?.user) {
+        const userId = data.session.user.id;
+        await supabase.from('profiles').upsert({
+          id: userId,
+          email: data.session.user.email,
+          name: name.trim(),
+          role: 'freelancer',
+          plan: 'free',
+          onboarding_completed: false,
+        });
+        await supabase.from('business_settings').upsert({ user_id: userId });
+        await supabase.from('notification_settings').upsert({ user_id: userId });
+        await supabase.from('workspace_preferences').upsert({ user_id: userId });
+        await supabase.from('subscriptions').upsert({ user_id: userId, plan: 'free', status: 'active' });
+
+        addToast('Account created successfully!', 'success');
+        router.push('/onboarding');
+      } else {
+        // Show "Check your email" screen — do not redirect.
+        setCheckEmail(true);
+      }
     } catch (err: any) {
       addToast(err.message || 'Registration failed', 'warning');
       triggerShake();
@@ -102,28 +135,10 @@ export default function SignupFormClient() {
   const handleSocialLogin = async (provider: 'google' | 'github') => {
     try {
       setLoading(true);
-      const { signInWithOAuth } = await import('../../lib/supabase/client');
       await signInWithOAuth(provider);
     } catch (err: any) {
-      console.warn(`${provider} OAuth signup warning:`, err);
-      const { signIn } = await import('../../lib/services/authService');
-      const socialEmail = provider === 'google' ? 'google.user@flowdesk.io' : 'github.user@flowdesk.io';
-      try {
-        const result = await signIn(socialEmail, 'demo-password-123');
-        setUser(result.user);
-        addToast(`Signed in with ${provider === 'google' ? 'Google' : 'GitHub'}!`, 'success');
-        const targetUrl = result.user.role === 'client' ? '/client/workspace' : '/freelancer/dashboard';
-        router.push(targetUrl);
-        setTimeout(() => {
-          if (window.location.pathname.includes('/signup') || window.location.pathname.includes('/login')) {
-            window.location.href = targetUrl;
-          }
-        }, 500);
-      } catch (fallbackErr: any) {
-        addToast(err.message || `${provider} signup failed`, 'warning');
-      } finally {
-        setLoading(false);
-      }
+      addToast(err.message || `${provider} signup failed`, 'warning');
+      setLoading(false);
     }
   };
 
@@ -132,14 +147,48 @@ export default function SignupFormClient() {
     setTimeout(() => setShaking(false), 500);
   };
 
-  const isFormValid = name.trim().length >= 2 && 
-                      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && 
-                      password.length >= 8 && 
-                      password === confirmPassword;
+  const isFormValid = name.trim().length >= 2 &&
+                      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+                      password.length >= 8 &&
+                      password === confirmPassword &&
+                      acceptTerms;
+
+  if (checkEmail) {
+    return (
+      <div className="space-y-6 text-center">
+        <div className="text-center space-y-2">
+          <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-emerald-50 text-emerald-600">
+            <MailCheck className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900">Check Your Email</h2>
+        </div>
+
+        <p className="text-sm text-gray-600 leading-relaxed">
+          We've sent a verification link to <strong>{email}</strong>. Click the link in the email to verify your account, then sign in to continue.
+        </p>
+
+        <div className="pt-2 space-y-3">
+          <Link
+            href="/login"
+            className="inline-block w-full bg-gray-900 hover:bg-gray-800 text-white font-medium rounded-full px-6 py-2.5 text-sm transition-colors"
+          >
+            Go to Login
+          </Link>
+          <button
+            type="button"
+            onClick={() => setCheckEmail(false)}
+            className="text-xs text-gray-500 hover:text-gray-900 font-semibold cursor-pointer"
+          >
+            Back to signup
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <form 
-      onSubmit={handleSubmit} 
+    <form
+      onSubmit={handleSubmit}
       className={`space-y-5 ${shaking ? 'animate-shake' : ''}`}
     >
       <div className="text-center space-y-1">
@@ -202,7 +251,7 @@ export default function SignupFormClient() {
         <label className="absolute left-4 top-3.5 text-gray-500 text-sm transition-all pointer-events-none peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-950 peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-xs">
           Password
         </label>
-        
+
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
@@ -257,6 +306,27 @@ export default function SignupFormClient() {
           <p className="text-red-600 text-xs mt-1 ml-1">{errors.confirmPassword}</p>
         )}
       </div>
+
+      {/* Terms Checkbox */}
+      <label className="flex items-start gap-2.5 text-xs text-gray-600 font-medium cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={acceptTerms}
+          onChange={(e) => {
+            setAcceptTerms(e.target.checked);
+            if (errors.terms) setErrors({ ...errors, terms: undefined });
+          }}
+          className="mt-0.5 w-4 h-4 accent-gray-900 rounded cursor-pointer"
+        />
+        <span>
+          I agree to the{' '}
+          <span className="text-gray-900 font-bold">Terms of Service</span> and{' '}
+          <span className="text-gray-900 font-bold">Privacy Policy</span>
+        </span>
+      </label>
+      {errors.terms && (
+        <p className="text-red-600 text-xs mt-1 ml-1">{errors.terms}</p>
+      )}
 
       {/* Submit Button */}
       <button

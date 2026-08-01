@@ -2,17 +2,30 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../AppContext';
-import { signIn } from '../../lib/services/authService';
-import { signInWithOAuth } from '../../lib/supabase/client';
-import { decodeJwtPayload } from '@/lib/utils/jwt';
+import { createClient, signInWithOAuth } from '../../lib/supabase/client';
 import { Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { loginSchema } from '@/lib/validation/schemas';
+
+const DEMO_ACCOUNTS = {
+  freelancer: { email: 'demo-freelancer@flowdesk.io', password: 'demo-password-123' },
+  client: { email: 'demo-client@flowdesk.io', password: 'demo-password-123' },
+};
 
 export default function LoginFormClient() {
   const router = useRouter();
-  const { setUser, addToast } = useApp();
-  
+  const searchParams = useSearchParams();
+  const { addToast } = useApp();
+  const supabase = createClient();
+
+  // Optional deep-link target set by middleware (?redirect=/freelancer/dashboard).
+  // Sanitized the same way as the auth callback route to block open redirects.
+  const rawRedirect = searchParams.get('redirect');
+  const redirectPath =
+    rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
+      ? rawRedirect
+      : null;
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -20,63 +33,28 @@ export default function LoginFormClient() {
   const [shaking, setShaking] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-  React.useEffect(() => {
-    const handleOAuthCallback = async () => {
-      try {
-        const hash = typeof window !== 'undefined' ? window.location.hash : '';
-        if (hash.includes('access_token=') || hash.includes('refresh_token=')) {
-          setLoading(true);        let userEmail: string | undefined = undefined;
-        let userName: string | undefined = undefined;
-        let userId: string | undefined = undefined;
+  const resolveRedirect = (profile: { role: string; onboarding_completed?: boolean }) => {
+    if (!profile.onboarding_completed) return '/onboarding';
+    return profile.role === 'client' ? '/client/workspace' : '/freelancer/dashboard';
+  };
 
-          // Parse hash payload directly
-          const params = new URLSearchParams(hash.substring(1));
-          const token = params.get('access_token');
-          if (token) {
-            try {
-              const decoded = decodeJwtPayload(token);
-              userEmail = decoded.email;
-              userName = decoded.user_metadata?.full_name || decoded.user_metadata?.name || userEmail?.split('@')[0];
-              userId = decoded.sub;
-            } catch (e) {
-              console.warn('Hash JWT parse error:', e);
-            }
-          }
+  const redirectAfterLogin = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, onboarding_completed, name')
+      .eq('id', userId)
+      .maybeSingle();
 
-          if (!userEmail) {
-            const { supabase } = await import('../../lib/supabase/client');
-            const { data: { session } } = await supabase.auth.getSession();
-            userEmail = session?.user?.email;
-            userName = session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name;
-            userId = session?.user?.id;
-          }
-
-          if (userEmail) {
-            const { signInWithOAuthUser } = await import('../../lib/services/authService');
-            const result = await signInWithOAuthUser(userEmail, userName, undefined, userId);
-            setUser(result.user);
-            addToast(`Welcome ${userName || result.user.name}! Redirecting...`, 'success');
-
-            const targetUrl = result.user.onboarded === false
-              ? '/onboarding'
-              : result.user.role === 'freelancer'
-                ? '/freelancer/dashboard'
-                : '/client/workspace';
-
-            window.location.href = targetUrl;
-          }
-
-        }
-      } catch (err: any) {
-        console.warn('OAuth session extraction warning:', err);
-      } finally {
-        setLoading(false);
+    // Honor the middleware-set ?redirect= deep link when present (it is
+    // sanitized above); middleware re-enforces role protection on the target.
+    const targetUrl = redirectPath || resolveRedirect(profile || { role: 'freelancer', onboarding_completed: false });
+    router.push(targetUrl);
+    setTimeout(() => {
+      if (window.location.pathname.includes('/login')) {
+        window.location.href = targetUrl;
       }
-    };
-
-    handleOAuthCallback();
-  }, []);
-
+    }, 500);
+  };
 
   const validate = () => {
     const result = loginSchema.safeParse({ email, password });
@@ -99,25 +77,19 @@ export default function LoginFormClient() {
       triggerShake();
       return;
     }
-    
+
     setLoading(true);
     try {
-      const result = await signIn(email, password);
-      setUser(result.user);
-      addToast('Welcome back, ' + result.user.name + '! Redirecting...', 'success');
-      
-      const targetUrl = result.user.onboarded === false
-        ? '/onboarding'
-        : result.user.role === 'freelancer'
-          ? '/freelancer/dashboard'
-          : '/client/workspace';
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase().trim(),
+        password,
+      });
 
-      router.push(targetUrl);
-      setTimeout(() => {
-        if (window.location.pathname.includes('/login')) {
-          window.location.href = targetUrl;
-        }
-      }, 500);
+      if (error) throw error;
+      if (!data.user) throw new Error('No user returned');
+
+      addToast(`Welcome back! Redirecting...`, 'success');
+      await redirectAfterLogin(data.user.id);
     } catch (err: any) {
       addToast(err.message || 'Invalid email or password', 'warning');
       triggerShake();
@@ -127,29 +99,23 @@ export default function LoginFormClient() {
   };
 
   const handleDemoLogin = async (role: 'freelancer' | 'client') => {
-    const targetEmail = role === 'freelancer' ? 'ann.k@flowdesk.com' : 'marta.adams@globallogistics.com';
-    setEmail(targetEmail);
-    setPassword('password');
+    const demo = DEMO_ACCOUNTS[role];
+    setEmail(demo.email);
+    setPassword(demo.password);
     setLoading(true);
     try {
-      const result = await signIn(targetEmail, 'password');
-      setUser(result.user);
-      addToast(`Welcome back, ${result.user.name}! Redirecting...`, 'success');
-      
-      const targetUrl = result.user.onboarded === false
-        ? '/onboarding'
-        : result.user.role === 'freelancer'
-          ? '/freelancer/dashboard'
-          : '/client/workspace';
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: demo.email,
+        password: demo.password,
+      });
 
-      router.push(targetUrl);
-      setTimeout(() => {
-        if (window.location.pathname.includes('/login')) {
-          window.location.href = targetUrl;
-        }
-      }, 500);
+      if (error) throw error;
+      if (!data.user) throw new Error('No user returned');
+
+      addToast(`Signed in as ${role === 'freelancer' ? 'Demo Freelancer' : 'Demo Client'}!`, 'success');
+      await redirectAfterLogin(data.user.id);
     } catch (err: any) {
-      addToast(err.message || 'Demo login failed', 'warning');
+      addToast(err.message || 'Demo login failed. Run `npm run migrate` to seed demo accounts.', 'warning');
       triggerShake();
     } finally {
       setLoading(false);
@@ -161,28 +127,10 @@ export default function LoginFormClient() {
       setLoading(true);
       await signInWithOAuth(provider);
     } catch (err: any) {
-      console.warn(`${provider} OAuth warning:`, err);
-      // Fallback: Instantly sign in via social demo account so user is never blocked
-      const socialEmail = provider === 'google' ? 'google.user@flowdesk.io' : 'github.user@flowdesk.io';
-      try {
-        const result = await signIn(socialEmail, 'demo-password-123');
-        setUser(result.user);
-        addToast(`Signed in with ${provider === 'google' ? 'Google' : 'GitHub'}!`, 'success');
-        const targetUrl = result.user.role === 'client' ? '/client/workspace' : '/freelancer/dashboard';
-        router.push(targetUrl);
-        setTimeout(() => {
-          if (window.location.pathname.includes('/login') || window.location.pathname.includes('/signup')) {
-            window.location.href = targetUrl;
-          }
-        }, 500);
-      } catch (fallbackErr: any) {
-        addToast(err.message || `${provider} login failed`, 'warning');
-      } finally {
-        setLoading(false);
-      }
+      addToast(err.message || `${provider} login failed`, 'warning');
+      setLoading(false);
     }
   };
-
 
   const triggerShake = () => {
     setShaking(true);
@@ -191,7 +139,7 @@ export default function LoginFormClient() {
 
   return (
     <form
-      onSubmit={handleSubmit} 
+      onSubmit={handleSubmit}
       className={`space-y-5 ${shaking ? 'animate-shake' : ''}`}
     >
       {/* Header */}
@@ -355,4 +303,3 @@ export default function LoginFormClient() {
     </form>
   );
 }
-

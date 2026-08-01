@@ -1,4 +1,4 @@
-import { getSession } from '@/lib/utils/session';
+import { getSession } from '@/lib/supabase/server';
 import { readAll } from '@/lib/services/dataService';
 import { getNextBestActions } from '@/lib/services/nextBestActionService';
 import { FreelancerDashboardClient } from '@/components/dashboard/FreelancerDashboardClient';

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/components/AppContext';
-import { supabase } from '@/lib/supabase/client';
+import { getDataClient } from '@/lib/supabase/data';
 import { isPlaceholder, readAll, keysToCamel } from '@/lib/services/dataService';
 import { Activity } from '@/lib/types';
 import { 
@@ -47,6 +47,7 @@ export default function ActivityClient() {
         setActivities(paginated);
         setHasMore(filtered.length > paginated.length);
       } else {
+        const supabase = getDataClient();
         let query = supabase
           .from('activities')
           .select('*')

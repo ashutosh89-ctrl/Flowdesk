@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/utils/session';
+import { getSession } from '@/lib/supabase/server';
 import { readAll, update, remove } from '@/lib/services/dataService';
 import { Invoice } from '@/lib/types';
 

@@ -245,6 +245,17 @@ export async function processRazorpayPayment(
   const invoice = await read<Invoice>('invoices', id);
   if (!invoice) throw new Error('Invoice not found');
 
+  // Idempotency: if this payment already produced a receipt (e.g. the webhook
+  // processed it first), return the existing state instead of duplicating it.
+  const allReceipts = await readAll<InvoiceReceipt>('invoice_receipts');
+  const existingReceipt = allReceipts.find(r => r.paymentId === razorpayPaymentId);
+  if (existingReceipt) {
+    // A receipt existing implies the payment was already processed (either here
+    // or by the webhook) — return the current state instead of duplicating.
+    const currentInvoice = await read<Invoice>('invoices', id);
+    return { invoice: currentInvoice ?? invoice, receipt: existingReceipt };
+  }
+
   const now = new Date().toISOString();
   const updatedInvoice = await update<Invoice>('invoices', id, {
     paymentStatus: 'paid',
@@ -253,9 +264,8 @@ export async function processRazorpayPayment(
     updatedAt: now
   });
 
-  const receipts = await readAll<InvoiceReceipt>('invoice_receipts');
   const year = new Date().getFullYear();
-  const receiptNum = `REC-${year}-${String(receipts.length + 1).padStart(4, '0')}`;
+  const receiptNum = `REC-${year}-${String(allReceipts.length + 1).padStart(4, '0')}`;
 
   const receipt: InvoiceReceipt = {
     id: `rec_${Math.random().toString(36).substring(2, 9)}`,

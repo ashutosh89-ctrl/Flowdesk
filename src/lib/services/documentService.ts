@@ -1,7 +1,7 @@
 import { Document } from '../types';
 import { create, read, readAll, update, isPlaceholder } from './dataService';
 import { logActivity } from './activityService';
-import { supabase } from '../supabase/client';
+import { getDataClient } from '../supabase/data';
 
 export interface UploadDocumentInput {
   workspaceId: string;
@@ -15,6 +15,7 @@ export async function uploadDocumentToStorage(file: File, path: string): Promise
   if (isPlaceholder) {
     return '#';
   }
+  const supabase = getDataClient();
   const { data, error } = await supabase.storage
     .from('documents')
     .upload(path, file, {

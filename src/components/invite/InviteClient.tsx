@@ -3,10 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/components/AppContext';
 import { getInvitationByToken, acceptInvitation, Invitation } from '@/lib/services/invitationService';
-import { signUp } from '@/lib/services/authService';
+import { createClient } from '@/lib/supabase/client';
 import GlassAuthCard from '@/components/auth/GlassAuthCard';
-import { Eye, EyeOff, Lock, User, Loader2, Check } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Eye, EyeOff, Lock, Loader2 } from 'lucide-react';
 
 export default function InviteClient({ token }: { token: string }) {
   const router = useRouter();
@@ -58,11 +57,41 @@ export default function InviteClient({ token }: { token: string }) {
 
     setSigningUp(true);
     try {
-      const signedUser = await signUp(invitation.email, password, name);
-      
-      await acceptInvitation(token);
+      // Server-side (admin): creates the auth user, client profile, links the
+      // client record, and marks the invite accepted.
+      await acceptInvitation(token, name.trim(), password);
 
-      setUser(signedUser.user);
+      // Sign the newly created client in and land them in the portal.
+      const supabase = createClient();
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: invitation.email,
+        password,
+      });
+
+      if (signInError) {
+        addToast('Account created! Please sign in to continue.', 'success');
+        router.replace('/login');
+        return;
+      }
+
+      if (signInData.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, email, name, avatar_url, role, plan, onboarding_completed, created_at')
+          .eq('id', signInData.user.id)
+          .maybeSingle();
+        setUser({
+          id: signInData.user.id,
+          email: profile?.email ?? signInData.user.email ?? '',
+          name: profile?.name ?? name,
+          avatar: profile?.avatar_url ?? undefined,
+          role: 'client',
+          plan: profile?.plan ?? 'free',
+          onboarded: true,
+          createdAt: profile?.created_at ?? new Date().toISOString(),
+        });
+      }
+
       addToast('Account created! Welcome to your workspace client portal.', 'success');
       router.replace('/client/workspace');
     } catch (err: any) {

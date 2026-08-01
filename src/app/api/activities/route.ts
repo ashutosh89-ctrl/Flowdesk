@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/utils/session';
+import { getSession } from '@/lib/supabase/server';
 import { getActivities, getAllActivities } from '@/lib/services/activityService';
 import { readAll } from '@/lib/services/dataService';
 import { ClientWorkspace, Client } from '@/lib/types';

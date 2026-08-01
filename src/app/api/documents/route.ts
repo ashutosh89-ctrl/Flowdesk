@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/utils/session';
+import { getSession } from '@/lib/supabase/server';
 import { readAll } from '@/lib/services/dataService';
 import { uploadDocument, requestDocuments } from '@/lib/services/documentService';
 import { Document } from '@/lib/types';

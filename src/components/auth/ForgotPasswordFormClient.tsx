@@ -2,11 +2,12 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '../AppContext';
-import { resetPassword } from '../../lib/services/authService';
+import { createClient } from '../../lib/supabase/client';
 import { Loader2 } from 'lucide-react';
 
 export default function ForgotPasswordFormClient() {
   const { addToast } = useApp();
+  const supabase = createClient();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -22,17 +23,19 @@ export default function ForgotPasswordFormClient() {
     setLoading(true);
     setError('');
 
-    setTimeout(async () => {
-      try {
-        await resetPassword(email);
-        addToast('Reset instructions sent if email exists', 'success');
-        setSubmitted(true);
-      } catch (err: any) {
-        addToast('Could not process reset request', 'warning');
-      } finally {
-        setLoading(false);
-      }
-    }, 1500);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        email.toLowerCase().trim(),
+        { redirectTo: `${window.location.origin}/reset-password` }
+      );
+      if (resetError) throw resetError;
+      addToast('Reset instructions sent if email exists', 'success');
+      setSubmitted(true);
+    } catch (err: any) {
+      addToast('Could not process reset request', 'warning');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -46,7 +49,7 @@ export default function ForgotPasswordFormClient() {
           </div>
           <h2 className="text-xl font-bold text-gray-900">Check Your Inbox</h2>
         </div>
-        
+
         <p className="text-sm text-gray-600 leading-relaxed">
           If an account exists with this email, we've sent you a password reset link. Please check your inbox.
         </p>

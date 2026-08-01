@@ -1,16 +1,13 @@
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { verifySession } from '@/lib/utils/session';
+import { getSession } from '@/lib/supabase/server';
 import { readAll } from '@/lib/services/dataService';
 import { FreelancerWorkspaceClient } from '@/components/workspace/FreelancerWorkspaceClient';
 import { Client, ClientWorkspace, Project, Document as AppDocument, Deliverable, Invoice, Activity, Comment as AppComment } from '@/lib/types';
 
 export default async function WorkspacePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const sessionCookie = (await cookies()).get('session')?.value;
-  
-  const user = sessionCookie ? await verifySession(sessionCookie) : null;
-  if (!user) redirect('/login');
+  const session = await getSession();
+  if (!session) redirect('/login');
 
   const workspaces = await readAll<ClientWorkspace>('workspaces');
   const workspace = workspaces.find(w => w.id === id) || workspaces[0];

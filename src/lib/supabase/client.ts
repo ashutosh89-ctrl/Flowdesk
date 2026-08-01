@@ -1,23 +1,23 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
-const supabaseUrl = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SUPABASE_URL) || 'https://tqbwhnfllvvrzrfhzblc.supabase.co';
-const supabaseAnonKey = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY) || 'placeholder-anon-key';
-const supabaseServiceKey = (typeof process !== 'undefined' && process.env?.SUPABASE_SERVICE_ROLE_KEY) || 'placeholder-service-key';
+/**
+ * Browser Supabase client (cookies-based, @supabase/ssr).
+ * Use in client components for all auth + data operations.
+ */
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
-
-// Server-side admin client (for service operations)
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
+/**
+ * Kick off an OAuth sign-in (PKCE). Supabase redirects back to /auth/callback
+ * with a ?code= that the server callback route exchanges for a session.
+ */
 export async function signInWithOAuth(provider: 'google' | 'github') {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const { data, error } = await supabase.auth.signInWithOAuth({
+  const { data, error } = await createClient().auth.signInWithOAuth({
     provider,
     options: {
       redirectTo: `${origin}/auth/callback`,

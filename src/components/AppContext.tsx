@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { useRouter } from 'next/navigation';
 import { User, Client, Invoice } from '../lib/types';
 import { getClients } from '../lib/services/clientService';
+import { createClient } from '../lib/supabase/client';
 import { ToastMessage } from './Toast';
 
 interface AppContextType {
@@ -82,22 +83,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    const supabase = createClient();
+    await supabase.auth.signOut();
     setUser(null);
     setActiveClientId(null);
     setActiveInvoiceId(null);
     addToast('Logged out successfully', 'info');
     router.push('/login');
+    router.refresh();
   };
 
-  // Load user from server-side session cookie via API
+  // Load user from the Supabase session + profiles table
   useEffect(() => {
     async function initAuth() {
       try {
-        const res = await fetch('/api/auth/me');
-        if (res.ok) {
-          const data = await res.json();
-          setUserState(data.user);
+        const supabase = createClient();
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, email, name, avatar_url, role, plan, onboarding_completed, created_at')
+            .eq('id', authUser.id)
+            .maybeSingle();
+
+          if (profile) {
+            setUserState({
+              id: profile.id,
+              email: profile.email ?? authUser.email ?? '',
+              name: profile.name ?? '',
+              avatar: profile.avatar_url ?? undefined,
+              role: profile.role ?? 'freelancer',
+              plan: profile.plan ?? 'free',
+              onboarded: profile.onboarding_completed ?? false,
+              createdAt: profile.created_at ?? new Date().toISOString(),
+            });
+          }
         }
       } catch {
         setUserState(null);

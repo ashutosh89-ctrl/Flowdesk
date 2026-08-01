@@ -1,16 +1,20 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useApp } from '../AppContext';
-import { updatePassword } from '../../lib/services/authService';
+import { createClient } from '../../lib/supabase/client';
 import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 
 export default function ResetPasswordFormClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token') || 'mock-token-123';
+  const code = searchParams.get('code');
   const { addToast } = useApp();
+  // Stabilize the client instance so the code-exchange effect below only runs
+  // once — createBrowserClient returns a new instance each call, and PKCE codes
+  // are single-use, so a re-run would fail and block the form.
+  const supabase = useMemo(() => createClient(), []);
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -19,6 +23,26 @@ export default function ResetPasswordFormClient() {
   const [success, setSuccess] = useState(false);
   const [strength, setStrength] = useState(0);
   const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string }>({});
+
+  const [exchangeError, setExchangeError] = useState('');
+
+  // Exchange the recovery code for a session on mount (PKCE flow).
+  // NOTE: React StrictMode double-invokes effects in dev, and PKCE codes are
+  // single-use — the ref guard ensures exactly one exchange attempt, so a
+  // valid link is never falsely flagged as invalid by a redundant call.
+  const exchangedRef = useRef(false);
+
+  useEffect(() => {
+    if (code && !exchangedRef.current) {
+      exchangedRef.current = true;
+      supabase.auth.exchangeCodeForSession(code).catch((err) => {
+        console.warn('Recovery code exchange failed:', err);
+        setExchangeError(
+          'This reset link is invalid or has expired. Please request a new one.'
+        );
+      });
+    }
+  }, [code, supabase]);
 
   useEffect(() => {
     if (!password) {
@@ -55,10 +79,12 @@ export default function ResetPasswordFormClient() {
 
     setLoading(true);
     try {
-      await updatePassword(token, password);
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+
       addToast('Password updated successfully', 'success');
       setSuccess(true);
-      
+
       setTimeout(() => {
         router.push('/login');
       }, 3000);
@@ -69,8 +95,10 @@ export default function ResetPasswordFormClient() {
     }
   };
 
-  const isFormValid = password.length >= 8 && 
-                      password === confirmPassword && 
+  // Block submitting with an invalid/expired recovery session.
+  const isFormValid = !exchangeError &&
+                      password.length >= 8 &&
+                      password === confirmPassword &&
                       strength >= 2;
 
   if (success) {
@@ -82,7 +110,7 @@ export default function ResetPasswordFormClient() {
           </div>
           <h2 className="text-xl font-bold text-gray-900">Password Updated Successfully</h2>
         </div>
-        
+
         <p className="text-sm text-gray-600 leading-relaxed">
           You can now sign in using your new password. You will be automatically redirected to the login page in 3 seconds.
         </p>
@@ -118,7 +146,7 @@ export default function ResetPasswordFormClient() {
         <label className="absolute left-4 top-3.5 text-gray-500 text-sm transition-all pointer-events-none peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-950 peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-xs">
           New Password
         </label>
-        
+
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
@@ -173,6 +201,18 @@ export default function ResetPasswordFormClient() {
           <p className="text-red-600 text-xs mt-1 ml-1">{errors.confirmPassword}</p>
         )}
       </div>
+
+      {exchangeError && (
+        <div className="text-center">
+          <p className="text-red-600 text-xs font-medium">{exchangeError}</p>
+          <Link
+            href="/forgot-password"
+            className="inline-block mt-2 text-xs font-semibold text-gray-900 hover:underline"
+          >
+            Request a new reset link
+          </Link>
+        </div>
+      )}
 
       {/* Hint */}
       <div className="text-xs text-gray-500 leading-relaxed pl-1">

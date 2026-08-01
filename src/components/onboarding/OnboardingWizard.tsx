@@ -5,9 +5,8 @@ import StepIndicator from './StepIndicator';
 import ProfileSetupStep from './ProfileSetupStep';
 import CreateClientStep from './CreateClientStep';
 import WorkspacePreviewStep from './WorkspacePreviewStep';
-import { createClient } from '../../lib/services/clientService';
-import { update } from '../../lib/services/dataService';
-import { User } from '../../lib/types';
+import { createClient as createAppClient } from '../../lib/services/clientService';
+import { createClient } from '../../lib/supabase/client';
 
 interface OnboardingWizardProps {
   step?: number;
@@ -100,14 +99,27 @@ export default function OnboardingWizard({ step: controlledStep, onStepChange, o
   const handleFinish = async () => {
     if (!user) return;
     try {
-      // 1. Update Freelancer Profile (Name and Avatar)
-      const updatedUser = await update<User>('users', user.id, {
-        name: profileName,
-        avatar: profileAvatar || user.avatar
-      });
-      
-      // 2. Create First Client & Workspace
-      await createClient({
+      const supabase = createClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error('Not authenticated');
+
+      // 1. Upload avatar (data URL → blob) to the avatars bucket if provided
+      let avatarUrl = profileAvatar || user.avatar || '';
+      if (profileAvatar && profileAvatar.startsWith('data:')) {
+        try {
+          const blob = dataUrlToBlob(profileAvatar);
+          const path = `${authUser.id}/avatar-${Date.now()}.png`;
+          const { data: uploadData } = await supabase.storage.from('avatars').upload(path, blob, { upsert: true });
+          if (uploadData) {
+            avatarUrl = supabase.storage.from('avatars').getPublicUrl(uploadData.path).data.publicUrl;
+          }
+        } catch (e) {
+          console.warn('Avatar upload failed, saving without avatar:', e);
+        }
+      }
+
+      // 2. Create First Client & Workspace (clientService persists to Supabase)
+      await createAppClient({
         userId: user.id,
         name: clientName,
         company: clientCompany,
@@ -120,14 +132,23 @@ export default function OnboardingWizard({ step: controlledStep, onStepChange, o
       triggerConfetti();
       addToast('Onboarding completed! Welcome to FlowDesk.', 'success');
 
-      // Call the completion handler (redirects appropriately)
+      // Call the completion handler (updates profile + redirects appropriately)
       if (onComplete) {
-        onComplete({ name: profileName, avatar: profileAvatar });
+        onComplete({ name: profileName, avatar: avatarUrl });
       }
     } catch (e) {
       addToast('Failed to save profile configurations', 'warning');
     }
   };
+
+  function dataUrlToBlob(dataUrl: string): Blob {
+    const [meta, base64] = dataUrl.split(',');
+    const mime = meta.match(/:(.*?);/)?.[1] || 'image/png';
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+  }
 
   return (
     <div className="w-full max-w-md mx-7 bg-white/20 backdrop-blur-2xl border border-white/40 rounded-[28px] shadow-2xl p-8 overflow-hidden relative">

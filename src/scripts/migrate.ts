@@ -1,48 +1,83 @@
-import { supabase } from '../lib/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 import { keysToSnake } from '../lib/services/dataService';
+import * as fs from 'fs';
+import * as path from 'path';
 
-const SEED_DATA = {
-  profiles: [
-    {
-      id: 'usr_ann',
-      email: 'ann.k@flowdesk.com',
-      name: 'Ann Kowalski',
-      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDfyQMh7YDLdS4DNFFIrBR32RuY8F9lNA8BvQ6ZWKGr29ibB3BcWaSy9SrXqKCPYBVB--r3qPxt5RTbd0SZ-sZRTM8Xt6Kh8pG4SYwJZ74-Qi_EB_2v_iJ1ON28qaaePZjrHYC9diaY1x7ar25MBlJy-htNlqzQHgo6Tf7FFTlXmLrm2jmrK4EBVzv24OLqImh76DHBcLJFVpbyoSAYSBCeFNUH5A3TpFRRInmdu5W0Il9OAMCfXQkX0tf4PDOPsE3QA-ya1tuEPGj-',
-      role: 'freelancer',
-      plan: 'pro',
-      createdAt: new Date('2025-01-01').toISOString(),
-    },
-    {
-      id: 'usr_marta',
-      email: 'marta.adams@globallogistics.com',
-      name: 'Marta Adams',
-      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuATeJv1t6XJNyYNrmhUXbKhHfgbMLvuAxQzIuCGT3UkU8vsK5sQLA54YJ029_DmkQpOtJxXQI192sWDLIsIqW2jC8K0ewpU4RABrEVUOOjQmNPH93uk4umNhFS26QTmXfI0U5NYfMBEPpBl9tuxs-fFPu_fqP0Dv-dMK7pBroV2tlHT-JksFt0iENX9owk8EY4PB6ZiTpfKukzWbBAGwDs32vnxdVfYey3JeKddFCmnXaXcxHlnyzZ9VT1VXpmlRzHwDfuDJ4jVyFEk',
-      role: 'client',
-      plan: 'free',
-      createdAt: new Date('2025-02-01').toISOString(),
+// Load .env.local manually so this script works outside Next's runtime
+// (e.g. `npx tsx src/scripts/migrate.ts`).
+(function loadLocalEnv() {
+  const envPath = path.resolve(process.cwd(), '.env.local');
+  if (!fs.existsSync(envPath)) return;
+  const lines = fs.readFileSync(envPath, 'utf-8').split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
     }
-  ],
+    if (process.env[key] === undefined) process.env[key] = value;
+  }
+})();
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+if (!supabaseUrl || !serviceRoleKey) {
+  console.error('Missing env: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.');
+  process.exit(1);
+}
+
+// Service-role client (bypasses RLS) for seeding
+const admin = createClient(supabaseUrl, serviceRoleKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+
+const DEMO_USERS = [
+  {
+    email: 'demo-freelancer@flowdesk.io',
+    password: 'demo-password-123',
+    name: 'Demo Freelancer',
+    role: 'freelancer',
+    plan: 'pro',
+  },
+  {
+    email: 'demo-client@flowdesk.io',
+    password: 'demo-password-123',
+    name: 'Demo Client',
+    role: 'client',
+    plan: 'free',
+  },
+];
+
+const SEED_DATA: Record<string, any[]> = {
   clients: [
     {
       id: 'cl_david',
-      userId: 'usr_ann',
+      userId: 'demo-freelancer',
       name: 'David Stern',
       company: 'Axiom Global',
       email: 'david.stern@axiom.co',
       phone: '+1 (555) 012-3456',
       status: 'active',
-      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAxR8bwfr9JWXSyZimF5A8hrg3qhWBFfvzW63M3JtvvGfkywqFrIh5D4I5BFyoHPkB47CxH78KI9X2F8HHhfk6YGxcYwJ8x7hW1WTMDVyECHrvwOpBkgBh7r3-kkDd5ZXb2jMOdOrwUSck7xkY8rNUUGbPrvBYdn2v-UEM9FsBXdZJbvJKhPSeO4vyviua86uiHVnF5AWy3wGRCPZ6GUAXKOgAhydyUEjOQcfasXt1-Mi8ONRW_BRuhVVeAtBYQNm8ssP62ucz4WKhz',
+      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=David',
       createdAt: new Date('2025-01-10').toISOString(),
     },
     {
       id: 'cl_marta',
-      userId: 'usr_ann',
+      userId: 'demo-freelancer',
       name: 'Marta Adams',
       company: 'Global Logistics Inc.',
       email: 'marta.adams@globallogistics.com',
       phone: '+1 (555) 789-0123',
       status: 'active',
-      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuATeJv1t6XJNyYNrmhUXbKhHfgbMLvuAxQzIuCGT3UkU8vsK5sQLA54YJ029_DmkQpOtJxXQI192sWDLIsIqW2jC8K0ewpU4RABrEVUOOjQmNPH93uk4umNhFS26QTmXfI0U5NYfMBEPpBl9tuxs-fFPu_fqP0Dv-dMK7pBroV2tlHT-JksFt0iENX9owk8EY4PB6ZiTpfKukzWbBAGwDs32vnxdVfYey3JeKddFCmnXaXcxHlnyzZ9VT1VXpmlRzHwDfuDJ4jVyFEk',
+      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Marta',
       createdAt: new Date('2025-01-15').toISOString(),
     }
   ],
@@ -137,10 +172,9 @@ const SEED_DATA = {
     {
       id: 'comm_1',
       projectId: 'proj_alpha',
-      userId: 'usr_ann',
-      userName: 'Alex Chen',
-      userAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAA-jMq2HElW6g6rd_J5SctmX5RLoXk3TpOqbSNrnwLhMMMwhpl5HqdfpTe2rPG9RjofEeZWP8m7hDncuA-4w9HKJ_8yoBvPL0Z8nl6YKmdmdTeZOOV5TPi4PIobqO8MfwoOemqI0yDaQ1BA2yHCl3rIuOFBXd1iT7e6ziSmXB6jD733TO9Ho7YAIhsp-oARHUkZeO2wuEByla2KbfoQz05gXeHXyHMRBjJeaxoWWgkZbH_SIRFDEy4TW30nARJ3qWuqSb0baIL7sSX',
-      content: "Marta, I've updated the fluid animation in the hero concept based on your feedback about the transparency levels. Let me know if the iridescent effect feels balanced now.",
+      userId: 'demo-freelancer',
+      userName: 'Demo Freelancer',
+      content: "Updated the hero animation based on your feedback. Let me know if the iridescent effect feels balanced now.",
       createdAt: new Date('2026-07-20T05:41:00').toISOString(),
     }
   ],
@@ -158,23 +192,86 @@ const SEED_DATA = {
 
 export async function runMigration() {
   console.log('Starting Supabase migration...');
-  
+
+  // Maps demo email -> auth user id so seed rows reference real UUIDs
+  const userIdByEmail = new Map<string, string>();
+
+  // 1. Create demo auth users + profiles + default settings rows
+  for (const demo of DEMO_USERS) {
+    console.log(`Ensuring demo user ${demo.email}...`);
+
+    let userId: string | null = null;
+
+    const { data: existing, error: listError } = await admin.auth.admin.listUsers();
+    if (!listError && existing) {
+      const match = existing.users.find(u => u.email === demo.email);
+      if (match) userId = match.id;
+    }
+
+    if (!userId) {
+      const { data: created, error: createError } = await admin.auth.admin.createUser({
+        email: demo.email,
+        password: demo.password,
+        email_confirm: true,
+        user_metadata: { full_name: demo.name, role: demo.role },
+      });
+      if (createError) {
+        console.error(`Could not create demo user ${demo.email}:`, createError.message);
+        continue;
+      }
+      userId = created.user.id;
+      console.log(`Created demo user ${demo.email} -> ${userId}`);
+    }
+
+    if (userId) userIdByEmail.set(demo.email, userId);
+
+    // Profile
+    const { error: profileError } = await admin.from('profiles').upsert({
+      id: userId,
+      email: demo.email,
+      name: demo.name,
+      role: demo.role,
+      plan: demo.plan,
+      onboarding_completed: true,
+    });
+    if (profileError) console.error(`Profile upsert failed for ${demo.email}:`, profileError.message);
+
+    // Default settings rows (ignore conflicts)
+    await admin.from('business_settings').upsert({ user_id: userId });
+    await admin.from('notification_settings').upsert({ user_id: userId });
+    await admin.from('workspace_preferences').upsert({ user_id: userId });
+    await admin.from('subscriptions').upsert({ user_id: userId, plan: demo.plan, status: 'active' });
+  }
+
+  // 2. Seed data tables (remap placeholder demo ids -> real auth UUIDs)
+  const remapIds = (row: any): any => {
+    const next = { ...row };
+    if (next.userId === 'demo-freelancer' || next.userId === 'demo-client') {
+      const email = next.userId === 'demo-freelancer' ? 'demo-freelancer@flowdesk.io' : 'demo-client@flowdesk.io';
+      const realId = userIdByEmail.get(email);
+      if (realId) next.userId = realId;
+    }
+    return next;
+  };
+
   for (const [table, rows] of Object.entries(SEED_DATA)) {
     console.log(`Migrating table ${table} (${rows.length} rows)...`);
-    
-    // Format keys to snake_case for DB compatibility
-    const formattedRows = rows.map(r => keysToSnake(r));
-    
-    const { error } = await supabase
-      .from(table)
-      .upsert(formattedRows, { onConflict: 'id' });
-      
+    const formattedRows = rows.map(r => keysToSnake(remapIds(r)));
+    const { error } = await admin.from(table).upsert(formattedRows, { onConflict: 'id' });
     if (error) {
       console.error(`Error migrating table ${table}:`, error.message);
     } else {
       console.log(`Table ${table} migrated successfully.`);
     }
   }
-  
+
   console.log('Migration completed.');
+}
+
+// Allow running directly: npx tsx scripts/migrate.ts
+if (require.main === module) {
+  runMigration().then(() => process.exit(0)).catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
 }

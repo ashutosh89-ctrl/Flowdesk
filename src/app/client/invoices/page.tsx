@@ -1,4 +1,4 @@
-import { getSession } from '@/lib/utils/session';
+import { getSession } from '@/lib/supabase/server';
 import { readAll } from '@/lib/services/dataService';
 import { ClientInvoicesClient } from '@/components/invoices/ClientInvoicesClient';
 import { redirect } from 'next/navigation';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useApp } from './AppContext';
-import { supabase } from '../lib/supabase/client';
+import { getDataClient } from '../lib/supabase/data';
 import { isPlaceholder, readAll, keysToCamel } from '../lib/services/dataService';
 import { Activity } from '../lib/types';
 import { 
@@ -51,6 +51,7 @@ export default function ActivityFeedScreen() {
         setHasMore(filtered.length > paginated.length);
       } else {
         // Real Supabase queries
+        const supabase = getDataClient();
         let query = supabase
           .from('activities')
           .select('*')

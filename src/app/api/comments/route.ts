@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/utils/session';
+import { getSession } from '@/lib/supabase/server';
 import { readAll } from '@/lib/services/dataService';
 import { getComments, addComment } from '@/lib/services/commentService';
 import { sanitizeInput } from '@/lib/utils/sanitize';

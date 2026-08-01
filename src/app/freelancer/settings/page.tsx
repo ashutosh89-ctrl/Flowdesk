@@ -1,4 +1,4 @@
-import { getSession } from '@/lib/utils/session';
+import { getSession } from '@/lib/supabase/server';
 import { FreelancerSettingsClient } from '@/components/settings/FreelancerSettingsClient';
 import { redirect } from 'next/navigation';
 

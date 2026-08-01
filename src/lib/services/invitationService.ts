@@ -1,5 +1,4 @@
-import { create, update, readAll } from './dataService';
-import { logActivity } from './activityService';
+import { getDataClient } from '../supabase/data';
 
 export interface Invitation {
   id: string;
@@ -11,97 +10,161 @@ export interface Invitation {
   expiresAt: string;
 }
 
-export async function createInvitation(clientId: string, email: string): Promise<Invitation> {
-  const token = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
-  
-  const sentAt = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days expiry
+/**
+ * Map a client_invites row (snake_case) to the app's Invitation shape.
+ * Exportable so server components can reuse it with the server client.
+ */
+export function mapInviteToInvitation(row: any, clientId: string): Invitation {
+  const isPendingExpired =
+    row.status === 'pending' && new Date(row.expires_at).getTime() < Date.now();
 
-  const newInvitation: Invitation = {
-    id: `inv_${Math.random().toString(36).substring(2, 9)}`,
-    clientId,
-    email: email.toLowerCase(),
-    token,
-    status: 'pending',
-    sentAt,
-    expiresAt
+  return {
+    id: row.id,
+    clientId: row.client_record_id || clientId,
+    email: row.client_email,
+    token: row.token,
+    status: isPendingExpired ? 'expired' : (row.status as Invitation['status']),
+    sentAt: row.created_at,
+    expiresAt: row.expires_at,
   };
-
-  const saved = await create<Invitation>('invitations', newInvitation);
-
-  // Log activity
-  const workspaces = await readAll<any>('workspaces');
-  const ws = workspaces.find(w => w.clientId === clientId);
-  if (ws) {
-    await logActivity({
-      workspaceId: ws.id,
-      type: 'comment_added', // Fallback to compatible activity log type or mock
-      description: `Invitation sent to ${email}`
-    });
-  }
-
-  // Update client status to onboarding
-  await update('clients', clientId, { status: 'onboarding' });
-
-  return saved;
 }
 
+/**
+ * Create a client invitation (freelancer side, authenticated via RLS).
+ * Persists to the `client_invites` table and marks the client as onboarding.
+ */
+export async function createInvitation(clientId: string, email: string): Promise<Invitation> {
+  const supabase = getDataClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const token =
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).substring(2, 15);
+
+  const now = new Date();
+  const sentAt = now.toISOString();
+  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+
+  const { data, error } = await supabase
+    .from('client_invites')
+    .insert({
+      freelancer_id: user.id,
+      client_record_id: clientId,
+      client_email: email.toLowerCase(),
+      token,
+      expires_at: expiresAt,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Mark the client as onboarding
+  await supabase.from('clients').update({ status: 'onboarding' }).eq('id', clientId);
+
+  return mapInviteToInvitation(data, clientId);
+}
+
+/**
+ * List invitations created by the current freelancer.
+ */
 export async function getInvitations(): Promise<Invitation[]> {
-  return await readAll<Invitation>('invitations');
+  const supabase = getDataClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from('client_invites')
+    .select('*')
+    .eq('freelancer_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+  return (data || []).map((r: any) => mapInviteToInvitation(r, r.client_record_id || ''));
 }
 
+/**
+ * Public (anonymous) invite lookup by token — routed through the admin API
+ * because the client isn't authenticated yet (RLS only exposes the
+ * freelancer's own invites).
+ */
 export async function getInvitationByToken(token: string): Promise<Invitation | null> {
-  const list = await getInvitations();
-  const found = list.find(x => x.token === token);
-  return found || null;
+  try {
+    const res = await fetch(`/api/invites/${encodeURIComponent(token)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      id: data.id,
+      clientId: '',
+      email: data.email,
+      token,
+      status: data.status,
+      sentAt: data.sentAt,
+      expiresAt: data.expiresAt,
+    };
+  } catch {
+    return null;
+  }
 }
 
-export async function acceptInvitation(token: string): Promise<Invitation> {
-  const inv = await getInvitationByToken(token);
-  if (!inv) throw new Error('Invitation token not found');
-  if (inv.status !== 'pending') throw new Error(`Invitation is already ${inv.status}`);
-  if (new Date(inv.expiresAt).getTime() < Date.now()) {
-    await update('invitations', inv.id, { status: 'expired' });
-    throw new Error('Invitation token has expired');
-  }
-
-  const updated = await update<Invitation>('invitations', inv.id, { status: 'accepted' });
-  await update('clients', inv.clientId, { status: 'active' });
-
-  // Log activity
-  const workspaces = await readAll<any>('workspaces');
-  const ws = workspaces.find(w => w.clientId === inv.clientId);
-  if (ws) {
-    await logActivity({
-      workspaceId: ws.id,
-      type: 'status_changed',
-      description: `Client portal access accepted by ${inv.email}`
-    });
-  }
-
-  return updated;
-}
-
-export async function resendInvitation(invitationId: string): Promise<Invitation> {
-  const list = await getInvitations();
-  const inv = list.find(x => x.id === invitationId);
-  if (!inv) throw new Error('Invitation not found');
-
-  const token = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
-  const sentAt = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-
-  const updated = await update<Invitation>('invitations', inv.id, {
-    token,
-    status: 'pending',
-    sentAt,
-    expiresAt
+/**
+ * Accept an invitation: creates the auth user, their client profile, links the
+ * client record, and marks the invite accepted. Performed server-side with the
+ * service-role client so it works before the client has a session.
+ */
+export async function acceptInvitation(token: string, name: string, password: string): Promise<void> {
+  const res = await fetch('/api/invites/accept', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, name, password }),
   });
 
-  return updated;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to accept invitation');
+  }
 }
 
+/**
+ * Resend an invitation: rotate the token and reset status to pending.
+ */
+export async function resendInvitation(invitationId: string): Promise<Invitation> {
+  const supabase = getDataClient();
+  const token =
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).substring(2, 15);
+
+  const now = new Date();
+  const sentAt = now.toISOString();
+  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from('client_invites')
+    .update({ token, status: 'pending', expires_at: expiresAt })
+    .eq('id', invitationId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapInviteToInvitation(data, data.client_record_id || '');
+}
+
+/**
+ * Revoke an invitation.
+ */
 export async function revokeInvitation(invitationId: string): Promise<Invitation> {
-  const updated = await update<Invitation>('invitations', invitationId, { status: 'revoked' });
-  return updated;
+  const supabase = getDataClient();
+  const { data, error } = await supabase
+    .from('client_invites')
+    .update({ status: 'revoked' })
+    .eq('id', invitationId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return mapInviteToInvitation(data, data.client_record_id || '');
 }
